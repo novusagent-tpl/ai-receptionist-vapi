@@ -1,0 +1,31 @@
+{
+  "id": "roma",
+  "name": "Ristorante Roma (di test)",
+  "timezone": "Europe/Rome",
+  "address": "Via di Test 123, Roma",
+  "phone": "+390600000000",
+  "max_people": 8,
+  "openings": {
+    "monday":    { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
+    "tuesday":   { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
+    "wednesday": { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
+    "thursday":  { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
+    "friday":    { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "23:00"] },
+    "saturday":  { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "23:00"] },
+    "sunday":    { "closed": true,  "lunch": null,                     "dinner": null }
+  },
+  "faq": [
+    {
+      "q": "Avete opzioni senza glutine?",
+      "a": "Sì, abbiamo alcune opzioni senza glutine. Chiedi pure al cameriere quando arrivi."
+    },
+    {
+      "q": "Avete tavoli all'aperto?",
+      "a": "Sì, in stagione abbiamo alcuni tavoli all'aperto, ma non possiamo garantirli al 100% in fase di prenotazione."
+    },
+    {
+      "q": "Avete parcheggio?",
+      "a": "Non abbiamo un parcheggio privato, ma ci sono posti auto nelle vie vicine."
+    }
+  ]
+}
