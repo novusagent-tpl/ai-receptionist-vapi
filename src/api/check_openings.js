@@ -2,6 +2,8 @@ const kb = require('../kb');
 const timeUtils = require('../time-utils');
 
 module.exports = async function checkOpenings(req, res) {
+console.log('CHECK_OPENINGS BODY:', JSON.stringify(req.body, null, 2));
+
   try {
     const body = req.body || {};
 
