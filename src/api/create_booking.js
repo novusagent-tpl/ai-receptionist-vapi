@@ -1,67 +1,155 @@
+const kb = require('../kb');
 const reservations = require('../reservations');
 
-// Giornata 7 – Fase 3: create_booking
-module.exports = async function createBooking(req, res) {
+/**
+ * Estrae info da una chiamata Vapi (tool-calls) se presente.
+ * Restituisce: { isVapi, toolCallId, args }
+ */
+function extractVapiContext(req) {
   const body = req.body || {};
-  const {
-    restaurant_id,
-    day,
-    time,
-    people,
-    name,
-    phone,
-    notes
-  } = body;
+  const message = body.message;
 
-  // 1) VALIDAZIONE STRICT
-  if (!restaurant_id || !day || !time || !people || !name || !phone) {
-    return res.status(400).json({
-      ok: false,
-      error_code: 'MISSING_PARAMS',
-      error_message: 'Parametri obbligatori: restaurant_id, day, time, people, name, phone'
-    });
+  if (!message || message.type !== 'tool-calls') {
+    return { isVapi: false, toolCallId: null, args: {} };
   }
 
+  const tc =
+    (Array.isArray(message.toolCalls) && message.toolCalls[0]) ||
+    (Array.isArray(message.toolCallList) && message.toolCallList[0]) ||
+    null;
+
+  if (!tc || !tc.function) {
+    return { isVapi: true, toolCallId: null, args: {} };
+  }
+
+  const args = tc.function.arguments || {};
+  return {
+    isVapi: true,
+    toolCallId: tc.id,
+    args
+  };
+}
+
+module.exports = async function createBooking(req, res) {
   try {
-    // 2) Chiamata a reservations.createReservation
-    const result = await reservations.createReservation({
-      restaurantId: restaurant_id,
+    const body = req.body || {};
+
+    const { isVapi, toolCallId, args } = extractVapiContext(req);
+
+    // Se è Vapi, prendiamo dai "arguments", altrimenti dal body normale
+    const source = isVapi ? args : body;
+
+    let {
+      restaurant_id,
       day,
       time,
       people,
       name,
       phone,
-      notes: notes || ''
-    });
+      notes
+    } = source;
 
-    // 3) Gestione errori dal modulo reservations
-    if (!result.ok) {
-      return res.status(500).json({
+    // Normalizzazioni base
+    restaurant_id = restaurant_id && String(restaurant_id).trim();
+    day = day && String(day).trim();
+    time = time && String(time).trim();
+    name = name && String(name).trim();
+    phone = phone && String(phone).trim();
+    notes = notes != null ? String(notes).trim() : null;
+
+    const peopleNum = Number(people);
+
+    // VALIDAZIONE STRICT
+    if (!restaurant_id || !day || !time || !name || !phone || !Number.isFinite(peopleNum) || peopleNum <= 0) {
+      const errorMsg = 'restaurant_id, day, time, people (>0), name, phone sono obbligatori';
+
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `VALIDATION_ERROR: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
         ok: false,
-        error_code: result.error_code || 'CREATE_BOOKING_ERROR',
-        error_message: result.error_message || 'Errore nella creazione prenotazione'
+        error_code: 'VALIDATION_ERROR',
+        error_message: errorMsg
       });
     }
 
-    // 4) Risposta STRICT
-    return res.status(200).json({
-      ok: true,
-      booking_id: result.booking_id,
-      day: result.day,
-      time: result.time,
-      people: result.people,
-      name: result.name,
-      phone: result.phone,
-      notes: result.notes || null
+    // Controllo max_people dal KB (se definito)
+    const info = kb.getRestaurantInfo(restaurant_id);
+    if (info.max_people && peopleNum > info.max_people) {
+      const errorMsg = `Numero massimo persone per prenotazione: ${info.max_people}`;
+
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `MAX_PEOPLE_EXCEEDED: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
+        ok: false,
+        error_code: 'MAX_PEOPLE_EXCEEDED',
+        error_message: errorMsg
+      });
+    }
+
+    // Creazione prenotazione reale
+    const result = await reservations.createReservation({
+      restaurantId: restaurant_id,
+      day,
+      time,
+      people: peopleNum,
+      name,
+      phone,
+      notes
     });
 
+    // Se chiamato da Vapi → formato tools
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            result: JSON.stringify(result)
+          }
+        ]
+      });
+    }
+
+    // Uso "normale" (Postman, ecc.)
+    return res.status(200).json(result);
   } catch (err) {
-    console.error('Errore /api/create_booking:', err.message);
-    return res.status(500).json({
+    console.error('Errore /api/create_booking:', err);
+
+    const body = req.body || {};
+    const { isVapi, toolCallId } = extractVapiContext(req);
+
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            error: `CREATE_BOOKING_ERROR: ${err.message || String(err)}`
+          }
+        ]
+      });
+    }
+
+    return res.status(200).json({
       ok: false,
       error_code: 'CREATE_BOOKING_ERROR',
       error_message: err.message
     });
   }
 };
-
