@@ -1,42 +1,106 @@
 const reservations = require('../reservations');
 
-// Giornata 7 – Fase 3: cancel_booking
-module.exports = async function cancelBooking(req, res) {
+/**
+ * Estrae info da una chiamata Vapi (tool-calls) se presente.
+ * Restituisce: { isVapi, toolCallId, args }
+ */
+function extractVapiContext(req) {
   const body = req.body || {};
-  const { restaurant_id, booking_id } = body;
+  const message = body.message;
 
-  // 1) VALIDAZIONE STRICT
-  if (!restaurant_id || !booking_id) {
-    return res.status(400).json({
-      ok: false,
-      error_code: 'MISSING_PARAMS',
-      error_message: 'Parametri obbligatori: restaurant_id, booking_id'
-    });
+  if (!message || message.type !== 'tool-calls') {
+    return { isVapi: false, toolCallId: null, args: {} };
   }
 
-  try {
-    // 2) Chiamata a reservations.deleteReservation
-    const result = await reservations.deleteReservation(restaurant_id, booking_id);
+  const tc =
+    (Array.isArray(message.toolCalls) && message.toolCalls[0]) ||
+    (Array.isArray(message.toolCallList) && message.toolCallList[0]) ||
+    null;
 
-    if (!result.ok) {
-      const status = result.error_code === 'BOOKING_NOT_FOUND' ? 400 : 500;
-      return res.status(status).json({
+  if (!tc || !tc.function) {
+    return { isVapi: true, toolCallId: null, args: {} };
+  }
+
+  const args = tc.function.arguments || {};
+  return {
+    isVapi: true,
+    toolCallId: tc.id,
+    args
+  };
+}
+
+module.exports = async function cancelBooking(req, res) {
+  try {
+    const body = req.body || {};
+    const { isVapi, toolCallId, args } = extractVapiContext(req);
+
+    // Se viene da Vapi, prendiamo gli argomenti dalla function.arguments
+    const source = isVapi ? args : body;
+
+    let { restaurant_id, booking_id } = source;
+
+    restaurant_id = restaurant_id && String(restaurant_id).trim();
+    booking_id = booking_id && String(booking_id).trim();
+
+    // VALIDAZIONE STRICT
+    if (!restaurant_id || !booking_id) {
+      const errorMsg = 'restaurant_id e booking_id sono obbligatori';
+
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `VALIDATION_ERROR: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
         ok: false,
-        error_code: result.error_code || 'CANCEL_BOOKING_ERROR',
-        error_message: result.error_message || 'Errore nella cancellazione prenotazione'
+        error_code: 'VALIDATION_ERROR',
+        error_message: errorMsg
       });
     }
 
-    // 3) Risposta STRICT
-    return res.status(200).json({
-      ok: true,
-      booking_id: result.booking_id,
-      canceled: true
-    });
+    // Cancellazione prenotazione reale
+    const result = await reservations.deleteReservation(
+      restaurant_id,
+      booking_id
+    );
 
+    // Risposta per Vapi
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            result: JSON.stringify(result)
+          }
+        ]
+      });
+    }
+
+    // Risposta "normale" per Postman / altri client
+    return res.status(200).json(result);
   } catch (err) {
-    console.error('Errore /api/cancel_booking:', err.message);
-    return res.status(500).json({
+    console.error('Errore /api/cancel_booking:', err);
+
+    const { isVapi, toolCallId } = extractVapiContext(req);
+
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            error: `CANCEL_BOOKING_ERROR: ${err.message || String(err)}`
+          }
+        ]
+      });
+    }
+
+    return res.status(200).json({
       ok: false,
       error_code: 'CANCEL_BOOKING_ERROR',
       error_message: err.message

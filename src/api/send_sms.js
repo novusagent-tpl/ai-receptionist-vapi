@@ -1,61 +1,171 @@
-// Giornata 7 – Fase 5: send_sms (Twilio, multi-ristorante)
+const kb = require('../kb');
 const twilio = require('twilio');
-const restaurants = require('../config/ristoranti.json');
 
-module.exports = async function sendSms(req, res) {
+// Inizializza client Twilio se configurato
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+let twilioClient = null;
+
+if (accountSid && authToken) {
+  twilioClient = twilio(accountSid, authToken);
+}
+
+/**
+ * Estrae info da una chiamata Vapi (tool-calls) se presente.
+ * Restituisce: { isVapi, toolCallId, args }
+ */
+function extractVapiContext(req) {
   const body = req.body || {};
-  const { restaurant_id, to, message } = body;
+  const message = body.message;
 
-  // 1) VALIDAZIONE STRICT
-  if (!restaurant_id || !to || !message) {
-    return res.status(400).json({
-      ok: false,
-      error_code: 'MISSING_PARAMS',
-      error_message: 'Parametri obbligatori: restaurant_id, to, message'
-    });
+  if (!message || message.type !== 'tool-calls') {
+    return { isVapi: false, toolCallId: null, args: {} };
   }
 
+  const tc =
+    (Array.isArray(message.toolCalls) && message.toolCalls[0]) ||
+    (Array.isArray(message.toolCallList) && message.toolCallList[0]) ||
+    null;
+
+  if (!tc || !tc.function) {
+    return { isVapi: true, toolCallId: null, args: {} };
+  }
+
+  const args = tc.function.arguments || {};
+  return {
+    isVapi: true,
+    toolCallId: tc.id,
+    args
+  };
+}
+
+module.exports = async function sendSms(req, res) {
   try {
-    // 2) Recupera config del ristorante
-    const ristoConfig = restaurants[restaurant_id];
-    if (!ristoConfig) {
-      return res.status(400).json({
+    const body = req.body || {};
+    const { isVapi, toolCallId, args } = extractVapiContext(req);
+
+    // Se viene da Vapi, usiamo gli arguments; altrimenti il body "normale"
+    const source = isVapi ? args : body;
+
+    let { restaurant_id, to, message } = source;
+
+    restaurant_id = restaurant_id && String(restaurant_id).trim();
+    to = to && String(to).trim();
+    message = message && String(message).trim();
+
+    // VALIDAZIONE STRICT
+    if (!restaurant_id || !to || !message) {
+      const errorMsg = 'restaurant_id, to e message sono obbligatori';
+
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `VALIDATION_ERROR: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
         ok: false,
-        error_code: 'INVALID_RESTAURANT',
-        error_message: 'restaurant_id non valido'
+        error_code: 'VALIDATION_ERROR',
+        error_message: errorMsg
       });
     }
 
-    if (!ristoConfig.sms_number) {
-      return res.status(500).json({
+    // Config ristorante (per numero mittente)
+    const info = kb.getRestaurantInfo(restaurant_id);
+    const fromNumber = (info && info.sms_number) || process.env.TWILIO_PHONE_NUMBER;
+
+    if (!fromNumber) {
+      const errorMsg = 'Numero mittente SMS non configurato (sms_number o TWILIO_PHONE_NUMBER mancante)';
+
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `CONFIG_ERROR: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
         ok: false,
         error_code: 'CONFIG_ERROR',
-        error_message: 'sms_number non configurato per questo ristorante'
+        error_message: errorMsg
       });
     }
 
-    // 3) Inizializza Twilio
-    const client = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
+    if (!twilioClient) {
+      const errorMsg = 'Twilio non configurato (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN mancanti)';
 
-    // 4) Invio SMS
-    const result = await client.messages.create({
-      body: message,
-      from: ristoConfig.sms_number, // numero del ristorante (mittente)
-      to                              // numero del cliente (destinatario)
+      if (isVapi && toolCallId) {
+        return res.status(200).json({
+          results: [
+            {
+              toolCallId,
+              error: `TWILIO_NOT_CONFIGURED: ${errorMsg}`
+            }
+          ]
+        });
+      }
+
+      return res.status(200).json({
+        ok: false,
+        error_code: 'TWILIO_NOT_CONFIGURED',
+        error_message: errorMsg
+      });
+    }
+
+    // Invio SMS reale
+    const sms = await twilioClient.messages.create({
+      to,
+      from: fromNumber,
+      body: message
     });
 
-    // 5) Risposta STRICT
-    return res.status(200).json({
+    const payload = {
       ok: true,
-      sid: result.sid
-    });
+      sid: sms.sid,
+      to,
+      from: fromNumber
+    };
 
+    // Risposta per Vapi
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            result: JSON.stringify(payload)
+          }
+        ]
+      });
+    }
+
+    // Risposta "normale" per Postman / altri client
+    return res.status(200).json(payload);
   } catch (err) {
-    console.error('Errore /api/send_sms:', err.message);
-    return res.status(500).json({
+    console.error('Errore /api/send_sms:', err);
+
+    const { isVapi, toolCallId } = extractVapiContext(req);
+
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [
+          {
+            toolCallId,
+            error: `SEND_SMS_ERROR: ${err.message || String(err)}`
+          }
+        ]
+      });
+    }
+
+    return res.status(200).json({
       ok: false,
       error_code: 'SEND_SMS_ERROR',
       error_message: err.message
