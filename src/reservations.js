@@ -7,6 +7,18 @@ const { getRestaurantConfig } = require('./config/restaurants');
 
 require('dotenv').config();
 
+function normalizePhone(p) {
+  if (!p) return "";
+  const digits = String(p).replace(/\D/g, ""); // tieni solo numeri
+
+  // Prendiamo sempre le ULTIME 9–10 cifre (tipico numero italiano)
+  if (digits.length > 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
+
 // -----------------------------
 // Google Sheets Setup
 // -----------------------------
@@ -122,18 +134,20 @@ async function listReservationsByPhone(restaurantId, phone) {
     // Skip header row
     const dataRows = rows.slice(1);
 
-    const results = dataRows
-      .filter(r => (r[5] || "").trim() === phone.trim())
-      .map(r => ({
-        booking_id: r[0],
-        day: r[1],
-        time: r[2],
-        people: Number(r[3]),
-        name: r[4],
-        phone: r[5],
-        notes: r[6] || null
-        // event_id: r[8] // se ti serve in futuro
-      }));
+    const normQuery = normalizePhone(phone);
+
+const results = dataRows
+  .filter(r => normalizePhone(r[5] || "") === normQuery)
+  .map(r => ({
+    booking_id: r[0],
+    day: r[1],
+    time: r[2],
+    people: Number(r[3]),
+    name: r[4],
+    phone: r[5],
+    notes: r[6] || null
+  }));
+
 
     return {
       ok: true,
