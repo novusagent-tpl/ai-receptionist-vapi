@@ -1,5 +1,7 @@
 const kb = require('../kb');
 const twilio = require('twilio');
+const logger = require('../logger');
+
 
 // Inizializza client Twilio se configurato
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -134,6 +136,14 @@ module.exports = async function sendSms(req, res) {
       to,
       from: fromNumber
     };
+
+    logger.info('send_sms_success', {
+      restaurant_id,
+      phone,
+      template,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
 
     // Risposta per Vapi
     if (isVapi && toolCallId) {

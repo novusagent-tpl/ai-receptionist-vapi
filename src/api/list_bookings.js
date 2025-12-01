@@ -1,4 +1,5 @@
 const reservations = require('../reservations');
+const logger = require('../logger');
 
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
@@ -81,6 +82,15 @@ module.exports = async function listBookings(req, res) {
         ]
       });
     }
+    
+    // Log successo sintetico
+    logger.info('list_bookings_success', {
+      restaurant_id,
+      phone,
+      count: Array.isArray(result && result.bookings) ? result.bookings.length : 0,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
 
     // Risposta "normale" per Postman / altri client
     return res.status(200).json(result);

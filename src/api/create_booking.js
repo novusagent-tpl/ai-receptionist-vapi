@@ -1,5 +1,6 @@
 const kb = require('../kb');
 const reservations = require('../reservations');
+const logger = require('../logger');
 
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
@@ -113,6 +114,18 @@ module.exports = async function createBooking(req, res) {
       name,
       phone,
       notes
+    });
+
+    // Log successo sintetico
+    logger.info('create_booking_success', {
+      restaurant_id,
+      day,
+      time,
+      people: peopleNum,
+      phone,
+      booking_id: result && result.booking_id,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
     });
 
     // Se chiamato da Vapi → formato tools

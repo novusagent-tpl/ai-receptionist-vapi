@@ -1,4 +1,5 @@
 const kb = require('../kb');
+const logger = require('../logger');
 
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
@@ -86,6 +87,14 @@ module.exports = async function faq(req, res) {
       answer: matchedAnswer,
       source: matchedAnswer ? 'kb' : null
     };
+
+   // Log successo sintetico
+    logger.info('faq_success', {
+      restaurant_id,
+      has_answer: !!matchedAnswer,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
 
     // Risposta per Vapi (tool-calls)
     if (isVapi && toolCallId) {

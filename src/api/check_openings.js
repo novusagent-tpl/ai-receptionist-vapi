@@ -1,8 +1,9 @@
 const kb = require('../kb');
 const timeUtils = require('../time-utils');
+const logger = require('../logger');
 
 module.exports = async function checkOpenings(req, res) {
-  console.log('CHECK_OPENINGS BODY:', JSON.stringify(req.body, null, 2));
+  // log dettagliato del body rimosso: usiamo logger strutturato più sotto
 
   try {
     const body = req.body || {};
@@ -64,6 +65,17 @@ module.exports = async function checkOpenings(req, res) {
     // --- LOGICA ORARI ---
     const openingsConfig = kb.getOpeningsConfig(restaurantId);
     const result = timeUtils.openingsFor(dayISO, openingsConfig);
+
+    // Log successo sintetico
+    logger.info('check_openings_success', {
+      restaurant_id: restaurantId,
+      day: dayISO,
+      closed: !!result.closed,
+      openings_count: Array.isArray(result.slots) ? result.slots.length : 0,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
+
 
     // --- RISPOSTA PER VAPI (formato tools) ---
     if (isVapi && toolCallId) {
