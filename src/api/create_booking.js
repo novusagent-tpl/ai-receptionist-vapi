@@ -143,7 +143,14 @@ module.exports = async function createBooking(req, res) {
     // Uso "normale" (Postman, ecc.)
     return res.status(200).json(result);
   } catch (err) {
-    console.error('Errore /api/create_booking:', err);
+    const errMsg = err && err.message ? err.message : String(err);
+
+    // LOG ERRORE STRUTTURATO
+    logger.error('create_booking_error', {
+      restaurant_id: body && body.restaurant_id ? body.restaurant_id : null,
+      message: errMsg,
+      request_id: req.requestId || null,
+    });
 
     const body = req.body || {};
     const { isVapi, toolCallId } = extractVapiContext(req);
@@ -159,7 +166,7 @@ module.exports = async function createBooking(req, res) {
       });
     }
 
-    return res.status(200).json({
+    return res.status(500).json({
       ok: false,
       error_code: 'CREATE_BOOKING_ERROR',
       error_message: err.message

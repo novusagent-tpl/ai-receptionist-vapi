@@ -141,7 +141,14 @@ module.exports = async function modifyBooking(req, res) {
     // Risposta "normale" per Postman / altri client
     return res.status(200).json(result);
   } catch (err) {
-    console.error('Errore /api/modify_booking:', err);
+const errMsg = err && err.message ? err.message : String(err);
+
+logger.error('<event_name>_error', {
+  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
+  message: errMsg,
+  request_id: req.requestId || null,
+});
+
 
     const { isVapi, toolCallId } = extractVapiContext(req);
 

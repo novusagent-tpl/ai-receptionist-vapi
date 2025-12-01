@@ -111,7 +111,14 @@ module.exports = async function faq(req, res) {
     // Risposta "normale" per Postman / altri client
     return res.status(200).json(payload);
   } catch (err) {
-    console.error('Errore /api/faq:', err);
+const errMsg = err && err.message ? err.message : String(err);
+
+logger.error('<event_name>_error', {
+  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
+  message: errMsg,
+  request_id: req.requestId || null,
+});
+
 
     const { isVapi, toolCallId } = extractVapiContext(req);
 

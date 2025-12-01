@@ -105,8 +105,15 @@ module.exports = async function checkOpenings(req, res) {
       closed: result.closed,
       slots: result.slots
     });
+
   } catch (err) {
-    console.error('Errore /api/check_openings:', err);
+    const errMsg = err && err.message ? err.message : String(err);
+
+    logger.error('check_openings_error', {
+      restaurant_id: restaurantId || null,
+      message: errMsg,
+      request_id: req.requestId || null,
+    });
 
     const body = req.body || {};
     let toolCallId = null;
