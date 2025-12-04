@@ -178,5 +178,6 @@ module.exports = async function createBooking(req, res) {
     error_code: 'CREATE_BOOKING_ERROR',
     error_message: err.message
   });
-}
+ }
+};
 
