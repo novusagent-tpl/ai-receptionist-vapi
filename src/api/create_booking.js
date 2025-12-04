@@ -64,6 +64,12 @@ module.exports = async function createBooking(req, res) {
     if (!restaurant_id || !day || !time || !name || !phone || !Number.isFinite(peopleNum) || peopleNum <= 0) {
       const errorMsg = 'restaurant_id, day, time, people (>0), name, phone sono obbligatori';
 
+   logger.error('create_booking_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -142,34 +148,35 @@ module.exports = async function createBooking(req, res) {
 
     // Uso "normale" (Postman, ecc.)
     return res.status(200).json(result);
-  } catch (err) {
-    const errMsg = err && err.message ? err.message : String(err);
+} catch (err) {
+  const errMsg = err && err.message ? err.message : String(err);
 
-    // LOG ERRORE STRUTTURATO
-    logger.error('create_booking_error', {
-      restaurant_id: body && body.restaurant_id ? body.restaurant_id : null,
-      message: errMsg,
-      request_id: req.requestId || null,
-    });
+  const requestBody = req.body || {};
 
-    const body = req.body || {};
-    const { isVapi, toolCallId } = extractVapiContext(req);
+  // LOG ERRORE STRUTTURATO
+  logger.error('create_booking_error', {
+    restaurant_id: requestBody.restaurant_id || null,
+    message: errMsg,
+    request_id: req.requestId || null,
+  });
 
-    if (isVapi && toolCallId) {
-      return res.status(200).json({
-        results: [
-          {
-            toolCallId,
-            error: `CREATE_BOOKING_ERROR: ${err.message || String(err)}`
-          }
-        ]
-      });
-    }
+  const { isVapi, toolCallId } = extractVapiContext(req);
 
-    return res.status(500).json({
-      ok: false,
-      error_code: 'CREATE_BOOKING_ERROR',
-      error_message: err.message
+  if (isVapi && toolCallId) {
+    return res.status(200).json({
+      results: [
+        {
+          toolCallId,
+          error: `CREATE_BOOKING_ERROR: ${err.message || String(err)}`
+        }
+      ]
     });
   }
-};
+
+  return res.status(500).json({
+    ok: false,
+    error_code: 'CREATE_BOOKING_ERROR',
+    error_message: err.message
+  });
+}
+

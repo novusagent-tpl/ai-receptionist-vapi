@@ -43,6 +43,14 @@ module.exports = async function checkOpenings(req, res) {
 
     // --- VALIDAZIONE ---
     if (!restaurantId || !dayISO) {
+  const errMsg = 'restaurant_id e day sono obbligatori';
+
+  logger.error('check_openings_validation_error', {
+    restaurant_id: restaurantId || body.restaurant_id || null,
+    message: errMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [

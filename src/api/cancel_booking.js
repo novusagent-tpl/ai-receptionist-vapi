@@ -47,6 +47,13 @@ module.exports = async function cancelBooking(req, res) {
     if (!restaurant_id || !booking_id) {
       const errorMsg = 'restaurant_id e booking_id sono obbligatori';
 
+  logger.error('cancel_booking_validation_error', {
+    restaurant_id,
+    booking_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -95,9 +102,10 @@ module.exports = async function cancelBooking(req, res) {
     return res.status(200).json(result);
   } catch (err) {
 const errMsg = err && err.message ? err.message : String(err);
+const requestBody = req.body || {};
 
-logger.error('<event_name>_error', {
-  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
+logger.error('cancel_booking_error', {
+  restaurant_id: requestBody.restaurant_id || null,
   message: errMsg,
   request_id: req.requestId || null,
 });

@@ -47,6 +47,12 @@ module.exports = async function faq(req, res) {
     if (!restaurant_id || !question) {
       const errorMsg = 'restaurant_id e question sono obbligatori';
 
+  logger.error('faq_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -113,8 +119,10 @@ module.exports = async function faq(req, res) {
   } catch (err) {
 const errMsg = err && err.message ? err.message : String(err);
 
-logger.error('<event_name>_error', {
-  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
+const requestBody = req.body || {};
+
+logger.error('faq_error', {
+  restaurant_id: requestBody.restaurant_id || null,
   message: errMsg,
   request_id: req.requestId || null,
 });

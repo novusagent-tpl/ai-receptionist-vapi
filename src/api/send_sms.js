@@ -59,6 +59,13 @@ module.exports = async function sendSms(req, res) {
     if (!restaurant_id || !to || !message) {
       const errorMsg = 'restaurant_id, to e message sono obbligatori';
 
+  logger.error('send_sms_validation_error', {
+    restaurant_id,
+    to,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -137,13 +144,13 @@ module.exports = async function sendSms(req, res) {
       from: fromNumber
     };
 
-    logger.info('send_sms_success', {
-      restaurant_id,
-      phone,
-      template,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
+logger.info('send_sms_success', {
+  restaurant_id,
+  to,
+  source: isVapi ? 'vapi' : 'http',
+  request_id: req.requestId || null,
+});
+
 
     // Risposta per Vapi
     if (isVapi && toolCallId) {
@@ -159,33 +166,34 @@ module.exports = async function sendSms(req, res) {
 
     // Risposta "normale" per Postman / altri client
     return res.status(200).json(payload);
-  } catch (err) {
-const errMsg = err && err.message ? err.message : String(err);
+   } catch (err) {
+  const errMsg = err && err.message ? err.message : String(err);
+  const requestBody = req.body || {};
 
-logger.error('<event_name>_error', {
-  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
-  message: errMsg,
-  request_id: req.requestId || null,
-});
+  logger.error('send_sms_error', {
+    restaurant_id: requestBody.restaurant_id || null,
+    message: errMsg,
+    request_id: req.requestId || null,
+  });
 
-    const { isVapi, toolCallId } = extractVapiContext(req);
+  const { isVapi, toolCallId } = extractVapiContext(req);
 
-    if (isVapi && toolCallId) {
-      return res.status(200).json({
-        results: [
-          {
-            toolCallId,
-            error: `SEND_SMS_ERROR: ${err.message || String(err)}`
-          }
-        ]
-      });
-    }
-
+  if (isVapi && toolCallId) {
     return res.status(200).json({
-      ok: false,
-      error_code: 'SEND_SMS_ERROR',
-      error_message: err.message
+      results: [
+        {
+          toolCallId,
+          error: `SEND_SMS_ERROR: ${err.message || String(err)}`
+        }
+      ]
     });
   }
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'SEND_SMS_ERROR',
+    error_message: err.message
+  });
+ }
 };
 

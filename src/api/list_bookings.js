@@ -47,6 +47,14 @@ module.exports = async function listBookings(req, res) {
     if (!restaurant_id || !phone) {
       const errorMsg = 'restaurant_id e phone sono obbligatori';
 
+  // QUI LOG
+  logger.error('list_bookings_validation_error', {
+    restaurant_id,
+    phone,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -71,6 +79,14 @@ module.exports = async function listBookings(req, res) {
       phone
     );
 
+logger.info('list_bookings_success', {
+  restaurant_id,
+  phone,
+  count: Array.isArray(result && result.bookings) ? result.bookings.length : 0,
+  source: isVapi ? 'vapi' : 'http',
+  request_id: req.requestId || null,
+});
+
     // Risposta per Vapi (tool-calls)
     if (isVapi && toolCallId) {
       return res.status(200).json({
@@ -82,27 +98,18 @@ module.exports = async function listBookings(req, res) {
         ]
       });
     }
-    
-    // Log successo sintetico
-    logger.info('list_bookings_success', {
-      restaurant_id,
-      phone,
-      count: Array.isArray(result && result.bookings) ? result.bookings.length : 0,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
 
     // Risposta "normale" per Postman / altri client
     return res.status(200).json(result);
   } catch (err) {
-   const errMsg = err && err.message ? err.message : String(err);
+    const errMsg = err && err.message ? err.message : String(err);
+    const body = req.body || {};
 
-  logger.error('<event_name>_error', {
-    restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
-    message: errMsg,
-    request_id: req.requestId || null,
-  });
-
+    logger.error('list_bookings_error', {
+      restaurant_id: body.restaurant_id || null,
+      message: errMsg,
+      request_id: req.requestId || null,
+    });
 
     const { isVapi, toolCallId } = extractVapiContext(req);
 
@@ -111,7 +118,7 @@ module.exports = async function listBookings(req, res) {
         results: [
           {
             toolCallId,
-            error: `LIST_BOOKINGS_ERROR: ${err.message || String(err)}`
+            error: `LIST_BOOKINGS_ERROR: ${errMsg}`
           }
         ]
       });
@@ -120,7 +127,8 @@ module.exports = async function listBookings(req, res) {
     return res.status(200).json({
       ok: false,
       error_code: 'LIST_BOOKINGS_ERROR',
-      error_message: err.message
+      error_message: errMsg
     });
   }
 };
+

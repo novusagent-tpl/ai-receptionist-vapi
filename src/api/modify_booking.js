@@ -65,6 +65,13 @@ module.exports = async function modifyBooking(req, res) {
       const errorMsg =
         'restaurant_id, booking_id e almeno uno tra new_day, new_time, new_people sono obbligatori';
 
+  logger.error('modify_booking_validation_error', {
+    restaurant_id,
+    booking_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
       if (isVapi && toolCallId) {
         return res.status(200).json({
           results: [
@@ -85,6 +92,13 @@ module.exports = async function modifyBooking(req, res) {
 
     if (newPeopleNum !== null && (!Number.isFinite(newPeopleNum) || newPeopleNum <= 0)) {
       const errorMsg = 'new_people deve essere un numero positivo';
+
+  logger.error('modify_booking_validation_error', {
+    restaurant_id,
+    booking_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
 
       if (isVapi && toolCallId) {
         return res.status(200).json({
@@ -143,12 +157,13 @@ module.exports = async function modifyBooking(req, res) {
   } catch (err) {
 const errMsg = err && err.message ? err.message : String(err);
 
-logger.error('<event_name>_error', {
-  restaurant_id: restaurant_id || body.restaurant_id || null, // se hai il dato, altrimenti null
+const requestBody = req.body || {};
+
+logger.error('modify_booking_error', {
+  restaurant_id: requestBody.restaurant_id || null,
   message: errMsg,
   request_id: req.requestId || null,
 });
-
 
     const { isVapi, toolCallId } = extractVapiContext(req);
 
