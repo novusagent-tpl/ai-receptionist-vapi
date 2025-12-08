@@ -1,6 +1,8 @@
 const kb = require('../kb');
 const reservations = require('../reservations');
 const logger = require('../logger');
+const { DateTime } = require('luxon');
+
 
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
@@ -87,6 +89,85 @@ module.exports = async function createBooking(req, res) {
         error_message: errorMsg
       });
     }
+
+// --- VALIDAZIONE TEMPORALE MINIMA (G13) ---
+
+const now = DateTime.now().setZone('Europe/Rome');
+const dayDt = DateTime.fromISO(day, { zone: 'Europe/Rome' });
+
+if (!dayDt.isValid) {
+  const errorMsg = 'Formato data non valido';
+  logger.error('create_booking_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errorMsg
+  });
+}
+
+// Ricostruzione orario completo
+let bookingDt = dayDt;
+if (typeof time === 'string' && time.includes(':')) {
+  const [hh, mm] = time.split(':').map(Number);
+  bookingDt = dayDt.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
+}
+
+// Caso 1 — Data nel passato
+if (bookingDt < now.startOf('day')) {
+  const errorMsg = 'Non è possibile prenotare per una data nel passato.';
+
+  logger.error('create_booking_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errorMsg
+  });
+}
+
+// Caso 2 — Orario passato (oggi)
+if (bookingDt < now) {
+  const errorMsg = 'L’orario indicato è già passato.';
+
+  logger.error('create_booking_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errorMsg
+  });
+}
+
+// Caso 3 — Last-minute < 10 minuti
+if (bookingDt < now.plus({ minutes: 10 })) {
+  const errorMsg = 'Non è possibile prenotare così a ridosso dell’orario attuale.';
+
+  logger.error('create_booking_validation_error', {
+    restaurant_id,
+    message: errorMsg,
+    request_id: req.requestId || null,
+  });
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errorMsg
+  });
+}
+
 
     // Controllo max_people dal KB (se definito)
     const info = kb.getRestaurantInfo(restaurant_id);
