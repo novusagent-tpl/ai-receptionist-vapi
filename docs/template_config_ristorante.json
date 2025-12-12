@@ -1,0 +1,11 @@
+{
+  "RIMPIAZZA_CON_RESTAURANT_ID": {
+    "name": "Ristorante NOME",
+    "kb_path": "kb/RIMPIAZZA_CON_RESTAURANT_ID.json",
+    "sheet_id": "GOOGLE_SHEET_ID",
+    "calendar_id": "GOOGLE_CALENDAR_ID",
+    "timezone": "Europe/Rome",
+    "sms_number": "+39NUMERO_TWILIO_O_RISTORANTE",
+    "max_people": 6
+  }
+}

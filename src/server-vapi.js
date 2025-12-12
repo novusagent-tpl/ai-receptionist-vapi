@@ -10,6 +10,8 @@ const modifyBooking = require('./api/modify_booking');
 const cancelBooking = require('./api/cancel_booking');
 const faq = require('./api/faq');
 const sendSms = require('./api/send_sms');
+const resolveRelativeDay = require('./api/resolve_relative_day');
+
 
 const app = express();
 
@@ -216,6 +218,7 @@ app.post('/api/modify_booking', modifyBooking);
 app.post('/api/cancel_booking', cancelBooking);
 app.post('/api/faq', faq);
 app.post('/api/send_sms', sendSms);
+app.post('/api/resolve_relative_day', resolveRelativeDay);
 
 
 // Avvio server
