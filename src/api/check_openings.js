@@ -107,6 +107,58 @@ module.exports = async function checkOpenings(req, res) {
       });
     }
 
+// --- GUARD: blocca date placeholder / non valide ---
+const dayStr = String(dayISO || '').trim();
+
+// blocca il placeholder che l’LLM inventa spesso
+if (dayStr === '2023-10-04') {
+  const errMsg = 'day placeholder non valido';
+
+  logger.error('check_openings_validation_error', {
+    ...logBase,
+    day: dayStr,
+    message: errMsg,
+  });
+
+  if (isVapi && toolCallId) {
+    return res.status(200).json({
+      results: [{ toolCallId, error: `VALIDATION_ERROR: ${errMsg}` }]
+    });
+  }
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errMsg
+  });
+}
+
+// formato minimo YYYY-MM-DD
+if (!/^\d{4}-\d{2}-\d{2}$/.test(dayStr)) {
+  const errMsg = 'day deve essere YYYY-MM-DD';
+
+  logger.error('check_openings_validation_error', {
+    ...logBase,
+    day: dayStr,
+    message: errMsg,
+  });
+
+  if (isVapi && toolCallId) {
+    return res.status(200).json({
+      results: [{ toolCallId, error: `VALIDATION_ERROR: ${errMsg}` }]
+    });
+  }
+
+  return res.status(200).json({
+    ok: false,
+    error_code: 'VALIDATION_ERROR',
+    error_message: errMsg
+  });
+}
+
+dayISO = dayStr;
+
+
     // --- VALIDAZIONE time (opzionale) ---
     if (requestedTime) {
       if (!isValidHHMM(requestedTime)) {
