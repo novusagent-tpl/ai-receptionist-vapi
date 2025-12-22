@@ -6,7 +6,7 @@
   "phone": "+390600000000",
   "max_people": 8,
   "openings": {
-    "monday":    { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
+    "monday":    { "closed": true, "lunch": null,                     "dinner": ["19:00", "22:30"] },
     "tuesday":   { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
     "wednesday": { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
     "thursday":  { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
