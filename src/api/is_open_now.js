@@ -3,54 +3,90 @@ const kb = require('../kb');
 const timeUtils = require('../time-utils');
 const logger = require('../logger');
 
-module.exports = async function isOpenNow(req, res) {
-  const { restaurant_id } = req.body || {};
+/**
+ * Estrae args e toolCallId se la richiesta arriva da VAPI (message.type="tool-calls").
+ * Supporta toolCalls e toolCallList (variante UI/API).
+ */
+function extractVapiContext(req) {
+  const body = req.body || {};
+  const message = body.message;
 
-  // Validazione input
-  if (!restaurant_id) {
-    return res.status(400).json({
-      ok: false,
-      error_code: 'MISSING_RESTAURANT_ID',
-      error_message: 'restaurant_id mancante'
+  if (!message || message.type !== 'tool-calls') {
+    return { isVapi: false, toolCallId: null, args: body };
+  }
+
+  const tc =
+    (Array.isArray(message.toolCalls) && message.toolCalls[0]) ||
+    (Array.isArray(message.toolCallList) && message.toolCallList[0]) ||
+    null;
+
+  const toolCallId = tc?.id || null;
+
+  let args = {};
+  try {
+    const rawArgs = tc?.function?.arguments;
+    if (typeof rawArgs === 'string' && rawArgs.trim()) {
+      args = JSON.parse(rawArgs);
+    } else if (rawArgs && typeof rawArgs === 'object') {
+      args = rawArgs;
+    }
+  } catch (_) {
+    args = {};
+  }
+
+  return { isVapi: true, toolCallId, args };
+}
+
+module.exports = async function isOpenNow(req, res) {
+  const { isVapi, toolCallId, args } = extractVapiContext(req);
+  const restaurant_id = args?.restaurant_id;
+
+  // helper risposta VAPI
+  function vapiOk(payload) {
+    return res.status(200).json({
+      results: [{ toolCallId, result: payload }]
     });
+  }
+
+  function vapiErr(code, msgIt) {
+    return res.status(200).json({
+      results: [{ toolCallId, error: `${code}: ${msgIt}` }]
+    });
+  }
+
+  // Validazione
+  if (!restaurant_id) {
+    const msgIt = 'restaurant_id mancante';
+    logger.error('is_open_now_validation_error', { restaurant_id: null, message: msgIt, isVapi });
+    if (isVapi) return vapiErr('VALIDATION_ERROR', msgIt);
+    return res.status(400).json({ ok: false, error_code: 'MISSING_RESTAURANT_ID', error_message: msgIt });
   }
 
   let openingsConfig;
   try {
     openingsConfig = kb.getOpeningsConfig(restaurant_id);
   } catch (err) {
-    return res.status(404).json({
-      ok: false,
-      error_code: 'RESTAURANT_NOT_FOUND',
-      error_message: 'Ristorante non trovato'
-    });
+    const msgIt = 'Ristorante non trovato';
+    logger.error('is_open_now_restaurant_not_found', { restaurant_id, message: msgIt, isVapi });
+    if (isVapi) return vapiErr('RESTAURANT_NOT_FOUND', msgIt);
+    return res.status(404).json({ ok: false, error_code: 'RESTAURANT_NOT_FOUND', error_message: msgIt });
   }
 
   try {
-    // Ora corrente Europe/Rome
     const now = DateTime.now().setZone('Europe/Rome');
     const todayISO = now.toISODate();
     const nowTime = now.toFormat('HH:mm');
 
-    // Recupero fasce di apertura di oggi
     const result = timeUtils.openingsFor(todayISO, openingsConfig);
 
-    // Caso: ristorante chiuso tutto il giorno
+    // chiuso tutto il giorno
     if (result.closed) {
-      logger.info('is_open_now', {
-        restaurant_id,
-        aperto_ora: false,
-        motivo: 'chiuso_oggi'
-      });
+      logger.info('is_open_now', { restaurant_id, aperto_ora: false, motivo: 'chiuso_oggi' });
 
-      return res.json({
-        ok: true,
-        open_now: false,
-        next_opening_time: null
-      });
+      const payload = { ok: true, open_now: false, next_opening_time: null };
+      return isVapi ? vapiOk(payload) : res.json(payload);
     }
 
-    // Verifica se ora corrente rientra in una fascia
     let openNow = false;
     let nextOpeningTime = null;
 
@@ -59,8 +95,6 @@ module.exports = async function isOpenNow(req, res) {
         openNow = true;
         break;
       }
-
-      // Calcolo prossima apertura di oggi
       if (!openNow && nowTime < slot.start) {
         if (!nextOpeningTime || slot.start < nextOpeningTime) {
           nextOpeningTime = slot.start;
@@ -74,22 +108,13 @@ module.exports = async function isOpenNow(req, res) {
       prossima_apertura: openNow ? null : nextOpeningTime
     });
 
-    return res.json({
-      ok: true,
-      open_now: openNow,
-      next_opening_time: openNow ? null : nextOpeningTime
-    });
-
+    const payload = { ok: true, open_now: openNow, next_opening_time: openNow ? null : nextOpeningTime };
+    return isVapi ? vapiOk(payload) : res.json(payload);
   } catch (err) {
-    logger.error('is_open_now_error', {
-      restaurant_id,
-      errore: err.message
-    });
+    const msgIt = 'Impossibile determinare se il ristorante è aperto in questo momento';
+    logger.error('is_open_now_error', { restaurant_id, errore: err.message });
 
-    return res.status(500).json({
-      ok: false,
-      error_code: 'INTERNAL_ERROR',
-      error_message: 'Impossibile determinare se il ristorante è aperto in questo momento'
-    });
+    if (isVapi) return vapiErr('INTERNAL_ERROR', msgIt);
+    return res.status(500).json({ ok: false, error_code: 'INTERNAL_ERROR', error_message: msgIt });
   }
 };
