@@ -47,6 +47,33 @@ function generateTimeSlots(startStr, endStr, stepMinutes = 30) {
 // openingsConfig = restaurantKB.openings
 // -----------------------------
 function openingsFor(dateISO, openingsConfig) {
+
+  // -----------------------------
+  // OVERRIDES per data (priorità assoluta)
+  // openingsConfig.overrides = { "YYYY-MM-DD": { closed:true | lunch:[..] | dinner:[..] } }
+  // -----------------------------
+  const override = openingsConfig?.overrides?.[dateISO];
+  if (override) {
+    if (override.closed === true) {
+      return { closed: true, slots: [] };
+    }
+
+    const slots = [];
+
+    if (override.lunch && Array.isArray(override.lunch) && override.lunch.length === 2) {
+      slots.push(...generateTimeSlots(override.lunch[0], override.lunch[1]));
+    }
+
+    if (override.dinner && Array.isArray(override.dinner) && override.dinner.length === 2) {
+      slots.push(...generateTimeSlots(override.dinner[0], override.dinner[1]));
+    }
+
+    return {
+      closed: slots.length === 0,
+      slots
+    };
+  }
+
   const dow = getDayOfWeek(dateISO);
 
   const config = openingsConfig[dow];

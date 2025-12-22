@@ -12,8 +12,14 @@
     "thursday":  { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },
     "friday":    { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "23:00"] },
     "saturday":  { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "23:00"] },
-    "sunday":    { "closed": true,  "lunch": null,                     "dinner": null }
-  },
+    "sunday":    { "closed": true,  "lunch": null,                     "dinner": null },
+
+  "overrides": {
+    "2026-01-01": { "closed": true },
+    "2025-12-25": { "closed": true },
+    "2025-12-31": { "closed": false, "dinner": ["19:00", "23:59"] }
+   }
+ },
   "faq": [
     {
       "q": "Avete opzioni senza glutine?",
