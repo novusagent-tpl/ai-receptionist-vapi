@@ -15,9 +15,9 @@
     "sunday":    { "closed": true,  "lunch": null,                     "dinner": null },
 
   "overrides": {
-    "2026-01-01": { "closed": true },
-    "2025-12-25": { "closed": true },
-    "2025-12-31": { "closed": false, "dinner": ["19:00", "23:59"] }
+    "2027-01-01": { "closed": true },
+    "2026-12-25": { "closed": true },
+    "2026-12-31": { "closed": false, "dinner": ["19:00", "23:59"] }
    }
  },
   "faq": [
