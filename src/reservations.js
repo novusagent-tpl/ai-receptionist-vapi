@@ -165,6 +165,45 @@ const results = dataRows
   }
 }
 
+
+// -----------------------------
+// List Reservations By Day
+// -----------------------------
+async function listReservationsByDay(restaurantId, dayISO) {
+  try {
+    // Riusa gli stessi helper già usati nel file (NON inventare client nuovi)
+    const sheets = getSheetsClient();
+    const restCfg = getRestaurantConfig(restaurantId);
+    const spreadsheetId = restCfg.sheet_id;
+
+    const resp = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'A:I'
+    });
+
+    const rows = resp.data.values || [];
+    const data = rows.slice(1); // skip header
+
+    const results = data
+      .filter(r => String(r[1] || '').trim() === String(dayISO || '').trim()) // col day
+      .map(r => ({
+        booking_id: r[0] || null,
+        day: r[1] || null,
+        time: r[2] || null
+      }))
+      .filter(x => x.day && x.time); // minimo indispensabile
+
+    return { ok: true, results };
+  } catch (err) {
+    return {
+      ok: false,
+      error_code: 'LIST_BY_DAY_ERROR',
+      error_message: err && err.message ? err.message : String(err)
+    };
+  }
+}
+
+
 // -----------------------------
 // Update Reservation
 // -----------------------------
@@ -326,6 +365,7 @@ async function deleteReservation(restaurantId, bookingId) {
 module.exports = {
   createReservation,
   listReservationsByPhone,
+  listReservationsByDay,
   updateReservation,
   deleteReservation
 };

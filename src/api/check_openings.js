@@ -1,6 +1,8 @@
 const kb = require('../kb');
 const timeUtils = require('../time-utils');
 const logger = require('../logger');
+const reservations = require('../reservations');
+const { DateTime } = require('luxon');
 
 /* =========================
    Helpers: time validation + nearest slots
@@ -30,6 +32,28 @@ function nearestSlots(slots, requestedTime, max = 3) {
     .map(x => x.s)
     .slice(0, max);
 }
+
+function buildDateTime(dayISO, hhmm, tz = 'Europe/Rome') {
+  const [hh, mm] = hhmm.split(':').map(Number);
+  return DateTime.fromISO(dayISO, { zone: tz }).set({
+    hour: hh, minute: mm, second: 0, millisecond: 0
+  });
+}
+
+function countActiveAt(dayISO, atTime, bookingTimes, avgStayMinutes, tz = 'Europe/Rome') {
+  const t = buildDateTime(dayISO, atTime, tz);
+  let count = 0;
+
+  for (const bt of bookingTimes) {
+    if (!bt || typeof bt !== 'string' || !/^\d{2}:\d{2}$/.test(bt)) continue;
+    const start = buildDateTime(dayISO, bt, tz);
+    const end = start.plus({ minutes: avgStayMinutes });
+    if (start <= t && t < end) count++;
+  }
+
+  return count;
+}
+
 
 module.exports = async function checkOpenings(req, res) {
   // IMPORTANT: queste variabili devono stare fuori dal try
@@ -188,13 +212,104 @@ dayISO = dayStr;
     const result = timeUtils.openingsFor(dayISO, openingsConfig);
 
     // availability (solo se requestedTime presente)
-    let available = null;
-    let nearest = null;
+let available = null;
+let nearest = null;
 
-    if (requestedTime) {
-      available = Array.isArray(result.slots) && result.slots.includes(requestedTime);
-      nearest = available ? [] : nearestSlots(result.slots, requestedTime, 3);
+if (requestedTime) {
+  const slots = Array.isArray(result.slots) ? result.slots : [];
+  const slotExists = slots.includes(requestedTime);
+
+  const info = kb.getRestaurantInfo(restaurantId);
+  const tz = (info && info.timezone) || 'Europe/Rome';
+
+  const maxConc = Number(info && info.max_concurrent_bookings);
+  const stayMin = Number(info && info.avg_stay_minutes);
+
+  if (!Number.isFinite(maxConc) || maxConc <= 0 || !Number.isFinite(stayMin) || stayMin <= 0) {
+    const errMsg = 'Parametri capacity mancanti o non validi (max_concurrent_bookings, avg_stay_minutes)';
+
+    logger.error('capacity_check_error', {
+      restaurant_id: restaurantId,
+      day: dayISO,
+      requested_time: requestedTime,
+      message: errMsg,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
+
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [{ toolCallId, error: `CONFIG_ERROR: ${errMsg}` }]
+      });
     }
+
+    return res.status(200).json({
+      ok: false,
+      error_code: 'CONFIG_ERROR',
+      error_message: errMsg
+    });
+  }
+
+  const dayRes = await reservations.listReservationsByDay(restaurantId, dayISO);
+  if (!dayRes || !dayRes.ok) {
+    const errMsg = (dayRes && dayRes.error_message) || 'Errore lettura prenotazioni del giorno';
+
+    logger.error('capacity_check_error', {
+      restaurant_id: restaurantId,
+      day: dayISO,
+      requested_time: requestedTime,
+      message: errMsg,
+      source: isVapi ? 'vapi' : 'http',
+      request_id: req.requestId || null,
+    });
+
+    if (isVapi && toolCallId) {
+      return res.status(200).json({
+        results: [{ toolCallId, error: `CAPACITY_READ_ERROR: ${errMsg}` }]
+      });
+    }
+
+    return res.status(200).json({
+      ok: false,
+      error_code: 'CAPACITY_READ_ERROR',
+      error_message: errMsg
+    });
+  }
+
+  const bookingTimes = (dayRes.results || []).map(x => x && x.time).filter(Boolean);
+
+  // available reale SOLO se requested_time è uno slot teorico
+  let activeAtRequested = null;
+  if (slotExists) {
+    activeAtRequested = countActiveAt(dayISO, requestedTime, bookingTimes, stayMin, tz);
+    available = activeAtRequested < maxConc;
+  } else {
+    available = false;
+  }
+
+  // nearest_slots capacity-aware
+  const capacityOkSlots = slots.filter(s => {
+    const c = countActiveAt(dayISO, s, bookingTimes, stayMin, tz);
+    return c < maxConc;
+  });
+
+  nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
+
+  logger.info('capacity_check_success', {
+    restaurant_id: restaurantId,
+    day: dayISO,
+    requested_time: requestedTime,
+    slot_exists: slotExists,
+    active_bookings_count: activeAtRequested,
+    max_concurrent_bookings: maxConc,
+    avg_stay_minutes: stayMin,
+    available,
+    nearest_slots_count: Array.isArray(nearest) ? nearest.length : 0,
+    source: isVapi ? 'vapi' : 'http',
+    request_id: req.requestId || null,
+  });
+}
+    
 
     // Log successo sintetico
     logger.info('check_openings_success', {

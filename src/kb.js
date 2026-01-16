@@ -43,6 +43,9 @@ function getRestaurantInfo(restaurantId) {
     address: kb.address || null,
     phone: kb.phone || null,
     max_people: kb.max_people || null
+    // G20 capacity
+    max_concurrent_bookings: kb.max_concurrent_bookings ?? null,
+    avg_stay_minutes: kb.avg_stay_minutes ?? null
   };
 }
 
