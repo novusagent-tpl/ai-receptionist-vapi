@@ -33,6 +33,48 @@ function nearestSlots(slots, requestedTime, max = 3) {
     .slice(0, max);
 }
 
+function hhmmToMinutes(hhmm) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  return (h * 60) + m;
+}
+
+// Split slots into contiguous blocks (e.g., lunch vs dinner) using stepMinutes gap
+function splitIntoBlocks(slots, stepMinutes = 30) {
+  const mins = (slots || []).map(hhmmToMinutes).sort((a,b)=>a-b);
+  const blocks = [];
+  let cur = [];
+
+  for (const x of mins) {
+    if (!cur.length) { cur.push(x); continue; }
+    const prev = cur[cur.length - 1];
+    if (x - prev > stepMinutes) { blocks.push(cur); cur = [x]; }
+    else cur.push(x);
+  }
+  if (cur.length) blocks.push(cur);
+  return blocks;
+}
+
+// Returns a Set of bookable slot minutes after applying cutoff per block
+function applyCutoffToSlots(slots, cutoffMinutes, stepMinutes = 30) {
+  if (!cutoffMinutes || cutoffMinutes <= 0) {
+    return new Set((slots || []).map(hhmmToMinutes));
+  }
+
+  const blocks = splitIntoBlocks(slots, stepMinutes);
+  const bookable = new Set();
+
+  for (const block of blocks) {
+    const lastStart = block[block.length - 1];
+    const closing = lastStart + stepMinutes;              // infer close as last slot + step
+    const threshold = closing - cutoffMinutes;            // latest allowed start time (in minutes)
+    for (const t of block) {
+      if (t <= threshold) bookable.add(t);
+    }
+  }
+  return bookable;
+}
+
+
 function buildDateTime(dayISO, hhmm, tz = 'Europe/Rome') {
   const [hh, mm] = hhmm.split(':').map(Number);
   return DateTime.fromISO(dayISO, { zone: tz }).set({
@@ -217,9 +259,13 @@ let nearest = null;
 
 if (requestedTime) {
   const slots = Array.isArray(result.slots) ? result.slots : [];
-  const slotExists = slots.includes(requestedTime);
-
   const info = kb.getRestaurantInfo(restaurantId);
+const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
+const bookableSet = applyCutoffToSlots(slots, cutoffMin, 30);
+const bookableSlots = slots.filter(s => bookableSet.has(hhmmToMinutes(s)));
+
+  const slotExists = bookableSlots.includes(requestedTime);
+
   const tz = (info && info.timezone) || 'Europe/Rome';
 
   const maxConc = Number(info && info.max_concurrent_bookings);
@@ -288,12 +334,13 @@ if (requestedTime) {
   }
 
   // nearest_slots capacity-aware
-  const capacityOkSlots = slots.filter(s => {
-    const c = countActiveAt(dayISO, s, bookingTimes, stayMin, tz);
-    return c < maxConc;
-  });
+const capacityOkSlots = bookableSlots.filter(s => {
+  const c = countActiveAt(dayISO, s, bookingTimes, stayMin, tz);
+  return c < maxConc;
+});
 
-  nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
+nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
+
 
   logger.info('capacity_check_success', {
     restaurant_id: restaurantId,

@@ -43,6 +43,7 @@ function getRestaurantInfo(restaurantId) {
     address: kb.address || null,
     phone: kb.phone || null,
     max_people: kb.max_people || null,
+    booking_cutoff_minutes: kb.booking_cutoff_minutes ?? 0,
 
     // G20 capacity
     max_concurrent_bookings: kb.max_concurrent_bookings ?? null,

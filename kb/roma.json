@@ -5,6 +5,7 @@
   "address": "Via di Test 123, Roma",
   "phone": "+390600000000",
   "max_people": 8,
+  "booking_cutoff_minutes": 45,
 
   "max_concurrent_bookings": 1,
   "avg_stay_minutes": 90,

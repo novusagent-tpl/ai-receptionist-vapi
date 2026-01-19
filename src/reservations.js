@@ -1,6 +1,8 @@
 const { google } = require('googleapis');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('./logger');
+
 
 const calendar = require('./calendar');
 const { getRestaurantConfig } = require('./config/restaurants');
@@ -83,14 +85,28 @@ async function createReservation({
       ]
     ];
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: 'A:I',
-      valueInputOption: 'RAW',
-      resource: {
-        values
-      }
-    });
+const colA = await sheets.spreadsheets.values.get({
+  spreadsheetId: sheetId,
+  range: 'Bookings!A:A'
+});
+
+const rowsA = (colA.data.values || []).length;
+const nextRow = Math.max(rowsA + 1, 2);
+
+await sheets.spreadsheets.values.update({
+  spreadsheetId: sheetId,
+  range: `Bookings!A${nextRow}:I${nextRow}`,
+  valueInputOption: 'RAW',
+  resource: { values }
+});
+
+logger.info('sheets_write_booking_row', {
+  restaurant_id: restaurantId,
+  sheet_id: sheetId,
+  tab: 'Bookings',
+  row: nextRow,
+  booking_id: bookingId || null
+});
 
     return {
       ok: true,
@@ -126,7 +142,7 @@ async function listReservationsByPhone(restaurantId, phone) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'A:I'
+      range: 'Bookings!A:I'
     });
 
     const rows = response.data.values || [];
@@ -178,7 +194,7 @@ async function listReservationsByDay(restaurantId, dayISO) {
 
     const resp = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'A:I'
+      range: 'Bookings!A:I'
     });
 
     const rows = resp.data.values || [];
@@ -217,7 +233,7 @@ async function updateReservation(restaurantId, bookingId, fields) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'A:I'
+      range: 'Bookings!A:I'
     });
 
     const rows = response.data.values || [];
@@ -262,7 +278,7 @@ async function updateReservation(restaurantId, bookingId, fields) {
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `A${googleRow}:I${googleRow}`,
+      range: `Bookings!A${googleRow}:I${googleRow}`,
       valueInputOption: "RAW",
       resource: {
         values: [[
@@ -314,7 +330,7 @@ async function deleteReservation(restaurantId, bookingId) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId,
-      range: 'A:I'
+      range: 'Bookings!A:I'
     });
 
     const rows = response.data.values || [];
@@ -329,7 +345,7 @@ async function deleteReservation(restaurantId, bookingId) {
       };
     }
 
-    const googleRow = rowIndex + 2;
+    const sheetRowNumber = rowIndex + 2; // header + 1-based
     const old = dataRows[rowIndex];
     const eventId = old[8] || null;
 
@@ -340,16 +356,51 @@ async function deleteReservation(restaurantId, bookingId) {
       });
     }
 
-    await sheets.spreadsheets.values.clear({
-      spreadsheetId: sheetId,
-      range: `A${googleRow}:I${googleRow}`
-    });
 
-    return {
-      ok: true,
-      booking_id: bookingId,
-      canceled: true
-    };
+const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+const bookingSheet = (meta.data.sheets || []).find(
+  s => s.properties && s.properties.title === 'Bookings'
+);
+
+if (!bookingSheet) {
+  return {
+    ok: false,
+    error_code: 'SHEET_NOT_FOUND',
+    error_message: 'Tab Bookings non trovata.'
+  };
+}
+
+const sheetIdNum = bookingSheet.properties.sheetId;
+
+await sheets.spreadsheets.batchUpdate({
+  spreadsheetId: sheetId,
+  resource: {
+    requests: [{
+      deleteDimension: {
+        range: {
+          sheetId: sheetIdNum,
+          dimension: 'ROWS',
+          startIndex: sheetRowNumber - 1, // 0-based, inclusivo
+          endIndex: sheetRowNumber        // 0-based, esclusivo
+        }
+      }
+    }]
+  }
+});
+
+logger.info('sheets_delete_booking_row', {
+  restaurant_id: restaurantId,
+  sheet_id: sheetId,
+  tab: 'Bookings',
+  row: sheetRowNumber,
+  booking_id: bookingId
+});
+
+return {
+  ok: true,
+  booking_id: bookingId,
+  canceled: true
+};
 
   } catch (err) {
     console.error("Errore deleteReservation:", err.message);
