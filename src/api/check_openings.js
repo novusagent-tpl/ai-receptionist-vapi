@@ -254,108 +254,119 @@ dayISO = dayStr;
     const result = timeUtils.openingsFor(dayISO, openingsConfig);
 
     // availability (solo se requestedTime presente)
-let available = null;
-let nearest = null;
+    let available = null;
+    let nearest = null;
+    let reason = null; // 'cutoff' | 'not_in_openings' | 'full' | null
 
-if (requestedTime) {
-  const slots = Array.isArray(result.slots) ? result.slots : [];
-  const info = kb.getRestaurantInfo(restaurantId);
-const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
-const bookableSet = applyCutoffToSlots(slots, cutoffMin, 30);
-const bookableSlots = slots.filter(s => bookableSet.has(hhmmToMinutes(s)));
+    if (requestedTime) {
+      const slots = Array.isArray(result.slots) ? result.slots : [];
+      const info = kb.getRestaurantInfo(restaurantId);
+      const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
+      const bookableSet = applyCutoffToSlots(slots, cutoffMin, 30);
+      const bookableSlots = slots.filter(s => bookableSet.has(hhmmToMinutes(s)));
 
-  const slotExists = bookableSlots.includes(requestedTime);
+      const inOpenings = slots.includes(requestedTime);       // dentro fascia teorica
+      const slotExists = bookableSlots.includes(requestedTime); // prenotabile dopo cutoff
 
-  const tz = (info && info.timezone) || 'Europe/Rome';
+      const tz = (info && info.timezone) || 'Europe/Rome';
 
-  const maxConc = Number(info && info.max_concurrent_bookings);
-  const stayMin = Number(info && info.avg_stay_minutes);
+      const maxConc = Number(info && info.max_concurrent_bookings);
+      const stayMin = Number(info && info.avg_stay_minutes);
 
-  if (!Number.isFinite(maxConc) || maxConc <= 0 || !Number.isFinite(stayMin) || stayMin <= 0) {
-    const errMsg = 'Parametri capacity mancanti o non validi (max_concurrent_bookings, avg_stay_minutes)';
+      if (!Number.isFinite(maxConc) || maxConc <= 0 || !Number.isFinite(stayMin) || stayMin <= 0) {
+        const errMsg = 'Parametri capacity mancanti o non validi (max_concurrent_bookings, avg_stay_minutes)';
 
-    logger.error('capacity_check_error', {
-      restaurant_id: restaurantId,
-      day: dayISO,
-      requested_time: requestedTime,
-      message: errMsg,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
+        logger.error('capacity_check_error', {
+          restaurant_id: restaurantId,
+          day: dayISO,
+          requested_time: requestedTime,
+          message: errMsg,
+          source: isVapi ? 'vapi' : 'http',
+          request_id: req.requestId || null,
+        });
 
-    if (isVapi && toolCallId) {
-      return res.status(200).json({
-        results: [{ toolCallId, error: `CONFIG_ERROR: ${errMsg}` }]
+        if (isVapi && toolCallId) {
+          return res.status(200).json({
+            results: [{ toolCallId, error: `CONFIG_ERROR: ${errMsg}` }]
+          });
+        }
+
+        return res.status(200).json({
+          ok: false,
+          error_code: 'CONFIG_ERROR',
+          error_message: errMsg
+        });
+      }
+
+      const dayRes = await reservations.listReservationsByDay(restaurantId, dayISO);
+      if (!dayRes || !dayRes.ok) {
+        const errMsg = (dayRes && dayRes.error_message) || 'Errore lettura prenotazioni del giorno';
+
+        logger.error('capacity_check_error', {
+          restaurant_id: restaurantId,
+          day: dayISO,
+          requested_time: requestedTime,
+          message: errMsg,
+          source: isVapi ? 'vapi' : 'http',
+          request_id: req.requestId || null,
+        });
+
+        if (isVapi && toolCallId) {
+          return res.status(200).json({
+            results: [{ toolCallId, error: `CAPACITY_READ_ERROR: ${errMsg}` }]
+          });
+        }
+
+        return res.status(200).json({
+          ok: false,
+          error_code: 'CAPACITY_READ_ERROR',
+          error_message: errMsg
+        });
+      }
+
+      const bookingTimes = (dayRes.results || []).map(x => x && x.time).filter(Boolean);
+
+      // available reale SOLO se requested_time è uno slot teorico e non pieno
+      let activeAtRequested = null;
+      if (slotExists) {
+        activeAtRequested = countActiveAt(dayISO, requestedTime, bookingTimes, stayMin, tz);
+        available = activeAtRequested < maxConc;
+        if (!available) {
+          reason = 'full';
+        }
+      } else {
+        available = false;
+        if (!inOpenings) {
+          reason = 'not_in_openings'; // fuori fasce di apertura
+        } else {
+          reason = 'cutoff'; // dentro fasce ma oltre cutoff
+        }
+      }
+
+      // nearest_slots capacity-aware
+      const capacityOkSlots = bookableSlots.filter(s => {
+        const c = countActiveAt(dayISO, s, bookingTimes, stayMin, tz);
+        return c < maxConc;
+      });
+
+      nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
+
+      logger.info('capacity_check_success', {
+        restaurant_id: restaurantId,
+        day: dayISO,
+        requested_time: requestedTime,
+        in_openings: inOpenings,
+        slot_exists: slotExists,
+        active_bookings_count: activeAtRequested,
+        max_concurrent_bookings: maxConc,
+        avg_stay_minutes: stayMin,
+        available,
+        reason,
+        nearest_slots_count: Array.isArray(nearest) ? nearest.length : 0,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
       });
     }
-
-    return res.status(200).json({
-      ok: false,
-      error_code: 'CONFIG_ERROR',
-      error_message: errMsg
-    });
-  }
-
-  const dayRes = await reservations.listReservationsByDay(restaurantId, dayISO);
-  if (!dayRes || !dayRes.ok) {
-    const errMsg = (dayRes && dayRes.error_message) || 'Errore lettura prenotazioni del giorno';
-
-    logger.error('capacity_check_error', {
-      restaurant_id: restaurantId,
-      day: dayISO,
-      requested_time: requestedTime,
-      message: errMsg,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
-
-    if (isVapi && toolCallId) {
-      return res.status(200).json({
-        results: [{ toolCallId, error: `CAPACITY_READ_ERROR: ${errMsg}` }]
-      });
-    }
-
-    return res.status(200).json({
-      ok: false,
-      error_code: 'CAPACITY_READ_ERROR',
-      error_message: errMsg
-    });
-  }
-
-  const bookingTimes = (dayRes.results || []).map(x => x && x.time).filter(Boolean);
-
-  // available reale SOLO se requested_time è uno slot teorico
-  let activeAtRequested = null;
-  if (slotExists) {
-    activeAtRequested = countActiveAt(dayISO, requestedTime, bookingTimes, stayMin, tz);
-    available = activeAtRequested < maxConc;
-  } else {
-    available = false;
-  }
-
-  // nearest_slots capacity-aware
-const capacityOkSlots = bookableSlots.filter(s => {
-  const c = countActiveAt(dayISO, s, bookingTimes, stayMin, tz);
-  return c < maxConc;
-});
-
-nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
-
-
-  logger.info('capacity_check_success', {
-    restaurant_id: restaurantId,
-    day: dayISO,
-    requested_time: requestedTime,
-    slot_exists: slotExists,
-    active_bookings_count: activeAtRequested,
-    max_concurrent_bookings: maxConc,
-    avg_stay_minutes: stayMin,
-    available,
-    nearest_slots_count: Array.isArray(nearest) ? nearest.length : 0,
-    source: isVapi ? 'vapi' : 'http',
-    request_id: req.requestId || null,
-  });
-}
     
 
     // Log successo sintetico
@@ -366,6 +377,7 @@ nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
       openings_count: Array.isArray(result.slots) ? result.slots.length : 0,
       requested_time: requestedTime || null,
       available,
+      reason,
       source: isVapi ? 'vapi' : 'http',
       request_id: req.requestId || null,
     });
@@ -379,6 +391,7 @@ nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
         slots: result.slots,
         requested_time: requestedTime || null,
         available,
+        reason,
         nearest_slots: nearest
       };
 
@@ -400,6 +413,7 @@ nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
       slots: result.slots,
       requested_time: requestedTime || null,
       available,
+      reason,
       nearest_slots: nearest
     });
 
