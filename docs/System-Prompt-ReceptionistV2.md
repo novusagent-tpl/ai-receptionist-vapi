@@ -715,4 +715,3 @@ Se metadata.restaurant\_id è mancante/vuoto/non riconosciuto:
 \- "C'è un problema di configurazione. Può richiamare più tardi o usare WhatsApp/sito?"
 
 \- Non usare mai restaurant\_id di default. Non inventare restaurant\_id.
-

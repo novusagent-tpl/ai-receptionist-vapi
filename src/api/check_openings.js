@@ -253,6 +253,46 @@ dayISO = dayStr;
     const openingsConfig = kb.getOpeningsConfig(restaurantId);
     const result = timeUtils.openingsFor(dayISO, openingsConfig);
 
+    // --- VALIDAZIONE ORARIO NEL PASSATO (se requestedTime presente) ---
+    if (requestedTime) {
+      const now = DateTime.now().setZone('Europe/Rome');
+      const dayDt = DateTime.fromISO(dayISO, { zone: 'Europe/Rome' });
+      
+      if (dayDt.isValid) {
+        const [hh, mm] = requestedTime.split(':').map(Number);
+        const requestedDt = dayDt.set({ hour: hh, minute: mm, second: 0, millisecond: 0 });
+        
+        // Se l'orario è nel passato (anche oggi)
+        if (requestedDt < now) {
+          const errMsg = 'L\'orario indicato è già passato.';
+          
+          logger.error('check_openings_past_time', {
+            restaurant_id: restaurantId,
+            day: dayISO,
+            requested_time: requestedTime,
+            message: errMsg,
+            source: isVapi ? 'vapi' : 'http',
+            request_id: req.requestId || null,
+          });
+          
+          if (isVapi && toolCallId) {
+            return res.status(200).json({
+              results: [{
+                toolCallId,
+                error: `PAST_TIME: ${errMsg}`
+              }]
+            });
+          }
+          
+          return res.status(200).json({
+            ok: false,
+            error_code: 'PAST_TIME',
+            error_message: errMsg
+          });
+        }
+      }
+    }
+
     // availability (solo se requestedTime presente)
     let available = null;
     let nearest = null;
