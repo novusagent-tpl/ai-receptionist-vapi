@@ -59,18 +59,24 @@ function openingsFor(dateISO, openingsConfig) {
     }
 
     const slots = [];
+    let lunchRange = null;
+    let dinnerRange = null;
 
     if (override.lunch && Array.isArray(override.lunch) && override.lunch.length === 2) {
       slots.push(...generateTimeSlots(override.lunch[0], override.lunch[1]));
+      lunchRange = [override.lunch[0], override.lunch[1]];
     }
 
     if (override.dinner && Array.isArray(override.dinner) && override.dinner.length === 2) {
       slots.push(...generateTimeSlots(override.dinner[0], override.dinner[1]));
+      dinnerRange = [override.dinner[0], override.dinner[1]];
     }
 
     return {
       closed: slots.length === 0,
-      slots
+      slots,
+      lunch_range: lunchRange,
+      dinner_range: dinnerRange
     };
   }
 
@@ -84,20 +90,26 @@ function openingsFor(dateISO, openingsConfig) {
   }
 
   const slots = [];
+  let lunchRange = null;
+  let dinnerRange = null;
 
   // lunch
   if (config.lunch && Array.isArray(config.lunch) && config.lunch.length === 2) {
     slots.push(...generateTimeSlots(config.lunch[0], config.lunch[1]));
+    lunchRange = [config.lunch[0], config.lunch[1]];
   }
 
   // dinner
   if (config.dinner && Array.isArray(config.dinner) && config.dinner.length === 2) {
     slots.push(...generateTimeSlots(config.dinner[0], config.dinner[1]));
+    dinnerRange = [config.dinner[0], config.dinner[1]];
   }
 
   return {
     closed: slots.length === 0,
-    slots
+    slots,
+    lunch_range: lunchRange,
+    dinner_range: dinnerRange
   };
 }
 
