@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { DateTime } = require('luxon');
 const logger = require('./logger');
 
 
@@ -152,6 +153,10 @@ async function listReservationsByPhone(restaurantId, phone) {
 
     const normQuery = normalizePhone(phone);
 
+    // Ottieni la data di oggi per filtrare prenotazioni passate
+    const restCfgTimezone = restCfg.timezone || 'Europe/Rome';
+    const today = DateTime.now().setZone(restCfgTimezone).startOf('day');
+
 const results = dataRows
   .filter(r => normalizePhone(r[5] || "") === normQuery)
   .map(r => ({
@@ -162,7 +167,15 @@ const results = dataRows
     name: r[4],
     phone: r[5],
     notes: r[6] || null
-  }));
+  }))
+  // Filtra solo prenotazioni future o di oggi
+  .filter(booking => {
+    if (!booking.day) return false;
+    const bookingDay = DateTime.fromISO(booking.day, { zone: restCfgTimezone }).startOf('day');
+    if (!bookingDay.isValid) return false;
+    // Include solo prenotazioni future o di oggi
+    return bookingDay >= today;
+  });
 
 
     return {
