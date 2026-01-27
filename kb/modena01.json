@@ -3,11 +3,11 @@
   "name": "Da Michele",
   "timezone": "Europe/Rome",
   "address": "Via di Test 69, Modena",
-  "phone": "+390600000000",
+  "phone": "+390600000001",
   "max_people": 4,
   "booking_cutoff_minutes": 30,
 
-  "max_concurrent_bookings": 1,
+  "max_concurrent_bookings": 3,
   "avg_stay_minutes": 60,
 
   "openings": {
