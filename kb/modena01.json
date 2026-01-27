@@ -1,0 +1,46 @@
+{
+  "id": "modena01",
+  "name": "Da Michele",
+  "timezone": "Europe/Rome",
+  "address": "Via di Test 69, Modena",
+  "phone": "+390600000000",
+  "max_people": 4,
+  "booking_cutoff_minutes": 30,
+
+  "max_concurrent_bookings": 1,
+  "avg_stay_minutes": 60,
+
+  "openings": {
+    "monday":    { "closed": true, "lunch": null,                      "dinner": null },
+    "tuesday":   { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "22:30"] },
+    "wednesday": { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "22:30"] },
+    "thursday":  { "closed": false, "lunch": ["12:30", "14:30"],       "dinner": ["19:00", "22:30"] },
+    "friday":    { "closed": false, "lunch": ["12:00", "15:00"],       "dinner": ["19:00", "23:30"] },
+    "saturday":  { "closed": false, "lunch": ["12:00", "15:00"],       "dinner": ["19:00", "23:30"] },
+    "sunday":    { "closed": true,  "lunch": null,                     "dinner": null },
+
+  "overrides": {
+    "2027-01-01": { "closed": true },
+    "2026-12-25": { "closed": true },
+    "2026-12-31": { "closed": false, "dinner": ["19:00", "23:59"] }
+   }
+ },
+  "faq": [
+    {
+      "q": "I Animali sono amessi?",
+      "a": "No, nel ristorante gli animali non sono amessi."
+    },
+    {
+      "q": "Avete opzioni senza glutine?",
+      "a": "Sì, abbiamo alcune opzioni senza glutine. Chiedi pure al cameriere quando arrivi."
+    },
+    {
+      "q": "Avete tavoli all'aperto?",
+      "a": "Sì, in stagione abbiamo alcuni tavoli all'aperto, ma non possiamo garantirli al 100% in fase di prenotazione."
+    },
+    {
+      "q": "Avete parcheggio?",
+      "a": "Sì, abbiamo un parcheggio privato, esso non è a pagamento e potete parcheggiare lì le macchine."
+    }
+  ]
+}

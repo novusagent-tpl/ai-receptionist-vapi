@@ -6,6 +6,19 @@
     "calendar_id": "09855ac5f977a03d174f27c715e8f9d10a726b35b28e45a2da23b05e9b3cb106@group.calendar.google.com",
     "timezone": "Europe/Rome",
     "sms_number": "+39XXXXXXXXXX",
-    "max_people": 6
+    "max_people": 8
+  }
+},
+
+{
+  "modena01": {
+    "name": "Da Michele",
+    "kb_path": "kb/modena01.json",
+    "sheet_id": "1UCCNju7Lo6EyiQakM98FE4ktZOV3pMtHUt5ZQQOTQDA/edit?gid=265496581#gid=265496581",
+    "calendar_id": "c77a6143eead9a14cd98ea298796c80c363552c96bda74dc226444a041c183f1@group.calendar.google.com",
+    "timezone": "Europe/Rome",
+    "sms_number": "+39XXXXXXXXXX",
+    "max_people": 4
   }
 }
+
