@@ -7,10 +7,8 @@
     "timezone": "Europe/Rome",
     "sms_number": "+39XXXXXXXXXX",
     "max_people": 8
-  }
-},
+  },
 
-{
   "modena01": {
     "name": "Da Michele",
     "kb_path": "kb/modena01.json",
