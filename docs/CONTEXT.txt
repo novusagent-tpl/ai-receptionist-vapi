@@ -1,0 +1,156 @@
+# AI-Receptionist-VAPI — CONTEXT (Single Source of Truth)
+
+## Stato attuale
+- Project: AI-Receptionist-VAPI (Italia, multi-ristorante)
+- Ambiente: Europe/Rome
+- Vincoli: **STRICT MODE**, backend = fonte di verità, prompt NON può contraddire backend
+- **Stato corrente: G22 — Voice Stress Test & Hardening (Fase 1 in corso)**
+
+---
+
+## Tools API disponibili (stabili)
+- /api/check_openings
+- /api/create_booking
+- /api/list_bookings
+- /api/modify_booking
+- /api/cancel_booking
+- /api/faq
+- /api/send_sms
+- Tool di supporto già integrati:
+  - resolve_relative_day
+  - resolve_relative_time
+  - is_open_now
+
+---
+
+## Decisioni chiave (immutabili)
+
+### Apertura vs Prenotabilità
+- `slots` = **orari di apertura** (NON influenzati da capacità o cutoff)
+- `available` + `nearest_slots` = **prenotabilità reale**
+- `unavailability_reason` guida il linguaggio:
+  - `not_in_openings` → non siamo aperti a quell’ora
+  - `cutoff` → aperti ma non prenotiamo a ridosso chiusura
+  - `full` → capacità esaurita
+
+### Cutoff prenotazioni
+- Config per ristorante: `booking_cutoff_minutes`
+- Applicato **solo** alla prenotabilità (available/nearest)
+- NON altera gli slot informativi
+
+### Capacity engine
+- Config: `max_concurrent_bookings`, `avg_stay_minutes`
+- `check_openings` calcola disponibilità su prenotazioni reali
+
+### Fasce pranzo / cena
+- Backend espone: `lunch_range`, `dinner_range`
+- Usate:
+  - per informazione orari
+  - per disambiguazione orari ambigui
+- NON per inventare slot
+
+---
+
+## G21 — Stato finale
+- Fase 1 ✅ Data Integrity Sheets
+- Fase 2 ✅ Cutoff pre-chiusura
+- Fase 3 ✅ Error handling umano (PAST_TIME / PAST_DATE)
+- Fase 4 ✅ Aperto ≠ prenotabile
+- Fase 5 ✅ Orari ambigui (10/22, no assunzioni)
+- Fase 6 ✅ Micro-UX & tono  
+➡️ **G21 CHIUSA**
+
+---
+
+## Data Integrity (Sheets) — decisioni implementate
+- Tab Google Sheets: `Bookings`
+- Create:
+  - scrittura deterministica `values.update` su `Bookings!A{row}:I{row}`
+  - STOP `append`
+- Delete:
+  - cancellazione riga con `deleteDimension`
+  - NO `values.clear`
+- Logger import fix in `reservations.js`
+
+---
+
+## File principali (touch list)
+- src/server-vapi.js
+- src/api/check_openings.js
+- src/reservations.js
+- src/calendar.js
+- src/time-utils.js
+- src/kb.js
+- kb/roma.json
+- src/logger.js
+- docs/*
+
+---
+
+## Prompt assistant — regole operative
+
+### Intent ORARI (informazione)
+- Se l’utente chiede orari/apertura:
+  - Rispondere **solo** su apertura (slots / lunch_range / dinner_range)
+  - ❌ NON parlare di prenotazioni
+  - ❌ IGNORARE cutoff, capacity, nearest_slots
+
+### Intent PRENOTAZIONE
+- Usare `available`, `unavailability_reason`, `nearest_slots`
+- Proporre **max 2 alternative**
+- Una domanda per turno
+
+### Orari ambigui (10 / 22)
+- Usare lunch_range / dinner_range
+- Chiedere conferma **solo se ambiguo**
+- NON chiamare tool prima della disambiguazione
+
+### Error handling umano
+- Mai messaggi tecnici
+- Spiegare il problema + recovery
+- Handover solo se necessario
+
+---
+
+## G22 — Voice Stress Test & Hardening
+
+### Obiettivo
+- Scoprire problemi reali in chiamata vocale
+- Eliminare chiamate tool inutili
+- Rafforzare prompt senza toccare backend
+
+### Stato
+- Fase 1: Test reali
+  - S1–S4 completati
+  - S5–S12 da fare
+- Fase 2: Classificazione problemi (PROMPT-first)
+- Fase 3: Patch mirate (micro-patch prompt)
+
+---
+
+## G22 — Problemi emersi dai test (S1–S4)
+
+1) `check_openings` chiamato una volta senza `restaurant_id` / `day`
+   - Causa: gating prompt non abbastanza forte
+   - Fix previsto: **HARD STOP** nel prompt
+
+2) `resolve_relative_time` chiamato con orari assoluti (“21”, “22:30”)
+   - Causa: mancanza whitelist positiva
+   - Fix previsto: **HARD STOP** nel prompt
+
+3) UX vocale: lettura orari tipo “2130”
+   - Fix previsto: normalizzazione vocale orari nel prompt
+
+4) Telefono salvato senza prefisso +39
+   - Fix previsto: normalizzazione telefono E.164 nel prompt
+
+---
+
+## Obiettivo immediato (G22 — Fase 1)
+- Applicare micro-patch PROMPT-ONLY:
+  - Hard stop check_openings
+  - Hard stop resolve_relative_time
+  - Normalizzazione vocale orari
+  - Normalizzazione telefono
+- Rifare test S1–S3
+- Verificare log puliti e UX vocale corretta

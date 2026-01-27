@@ -7,7 +7,7 @@
   "max_people": 8,
   "booking_cutoff_minutes": 45,
 
-  "max_concurrent_bookings": 10,
+  "max_concurrent_bookings": 3,
   "avg_stay_minutes": 60,
 
   "openings": {
