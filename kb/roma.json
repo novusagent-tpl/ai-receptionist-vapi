@@ -33,17 +33,17 @@
     },
     {
       "q": "Avete opzioni senza glutine?",
-      "a": "Sì, abbiamo alcune opzioni senza glutine. Chiedi pure al cameriere quando arrivi."
+      "a": "Sì, abbiamo alcune opzioni senza glutine. Chiedi pure al cameriere quando arrivi.",
       "keywords": ["glutine"]
     },
     {
       "q": "Avete tavoli all'aperto?",
-      "a": "Sì, in stagione abbiamo alcuni tavoli all'aperto, ma non possiamo garantirli al 100% in fase di prenotazione."
+      "a": "Sì, in stagione abbiamo alcuni tavoli all'aperto, ma non possiamo garantirli al 100% in fase di prenotazione.",
       "keywords": ["aperto", "tavoli all'aperto"]
     },
     {
       "q": "Avete parcheggio?",
-      "a": "Non abbiamo un parcheggio privato, ma ci sono posti auto nelle vie vicine."
+      "a": "Non abbiamo un parcheggio privato, ma ci sono posti auto nelle vie vicine.",
       "keywords": ["parcheggio", "macchina"]
     }
   ]
