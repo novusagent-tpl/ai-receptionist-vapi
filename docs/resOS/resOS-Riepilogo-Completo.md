@@ -160,3 +160,35 @@ Quindi: stesse operazioni che facevi con Google, stesso flusso con Vapi; solo il
 3. **Cosa devi fare ora:** in `.env` metti `RESERVATIONS_BACKEND=resos` e `RESOS_API_KEY=...` (la tua API key resOS); in `ristoranti.json` per il ristorante che usa resOS aggiungi `reservations_backend: "resos"` e `resos_restaurant_id` (il restaurantId resOS, es. `"JLAs2CviunNCSEfbt"`). Poi riavvii il server e provi crea/lista/modifica/cancella. Quando tutto funziona, resOS è implementato e fa tutto quello che facevi con Google + Vapi.
 
 Se un passaggio non torna (es. GET restaurants dà errore, o il server restituisce un messaggio strano), scrivi quale passo e che messaggio vedi (in Postman o nei log) e si può andare avanti da lì.
+
+---
+
+## 8. Domande frequenti – Comportamento sistema
+
+### Orari: KB vs gestionale (resOS)
+
+- **check_openings** (disponibilità e slot) usa **solo la Knowledge Base** (KB del ristorante: `openings`, `overrides`, `booking_cutoff_minutes`, `max_concurrent_bookings`, `avg_stay_minutes`). Non interroga il gestionale.
+- **create_booking** e **modify_booking** inviano la prenotazione al **gestionale** (resOS). Se nel gestionale gli orari sono diversi (es. KB 12–22, resOS 15–22), l’assistente propone gli slot dalla KB; al momento della creazione il gestionale può accettare o rifiutare. Se resOS rifiuta (es. orario fuori dalla sua finestra), l’API restituisce `ok: false` con `error_message`; l’assistente deve comunicare quel messaggio al cliente.
+- In sintesi: **fonte slot/orari per l’assistente = KB**; **fonte di verità per la prenotazione effettiva = gestionale**. Per evitare disallineamenti, è bene allineare orari in KB e nel gestionale.
+
+### Durata prenotazione (resOS)
+
+- La durata inviata a resOS in **create** è: **prima** `avg_stay_minutes` dalla **KB** del ristorante, **poi** se assente/non valido il valore da `.env` **RESOS_DEFAULT_DURATION_MINUTES** (default 120).
+- Quindi: se in `kb/modena01.json` c’è `"avg_stay_minutes": 60`, si usa 60 minuti; se in `.env` hai `RESOS_DEFAULT_DURATION_MINUTES=90` e in KB non c’è `avg_stay_minutes`, si usano 90 minuti. La KB ha priorità sull’env.
+
+### list_bookings e prenotazioni passate
+
+- **list_bookings** (per telefono) restituisce **solo prenotazioni future**: stesso giorno con orario già passato vengono escluse dal backend (adapter resOS). L’assistente riceve quindi solo prenotazioni ancora valide e non suggerirà prenotazioni passate.
+
+### Stato “richiesta” vs “accettata” su resOS
+
+- Se in Postman (o nel pannello resOS) la prenotazione appare come **richiesta** e non **accettata**, dipende dal **gestionale** (resOS): il nostro backend invia correttamente la prenotazione; eventuali stati “richiesta / accettata” sono gestiti da resOS (es. conferma manuale dal ristorante). Non dipende dal nostro codice.
+
+### Regole comuni (cutoff, max_people) e Google Sheets/Calendar
+
+- Le regole **booking_cutoff_minutes**, **max_people** (e capacità per **check_openings**) si applicano **a tutti i backend** (Google Sheets, OctoTable, resOS): sono gestite nel nostro API layer (create_booking, check_openings) e nella KB, non solo dal gestionale.
+- **Google Sheets/Calendar** non vanno in conflitto con resOS: ogni ristorante ha **un solo** `reservations_backend` (sheets, octotable o resos). Se modena01 è su resOS, per modena01 non si usa Sheets; un altro ristorante può restare su Sheets. Stesse regole (cutoff, max_people) valgono per tutti.
+
+### modify_booking in Postman
+
+- L’endpoint si aspetta il **body in JSON** (raw, `Content-Type: application/json`). Oltre a `restaurant_id` e `booking_id`, serve **almeno uno** tra: `new_day`, `new_time`, `new_people`. Sono accettati anche gli **alias** `day`, `time`, `people` (es. `{ "restaurant_id": "modena01", "booking_id": "xxx", "people": 3 }` per cambiare il numero di persone). Se usi Params o form-data invece del body JSON, i campi potrebbero non essere letti e riceverai l’errore di validazione.

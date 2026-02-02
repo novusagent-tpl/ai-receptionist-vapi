@@ -43,17 +43,21 @@ module.exports = async function modifyBooking(req, res) {
       booking_id,
       new_day,
       new_time,
-      new_people
+      new_people,
+      day,
+      time,
+      people
     } = source;
 
     restaurant_id = restaurant_id && String(restaurant_id).trim();
     booking_id = booking_id && String(booking_id).trim();
-    new_day = new_day && String(new_day).trim();
-    new_time = new_time && String(new_time).trim();
+    new_day = String(new_day ?? day ?? '').trim() || null;
+    new_time = String(new_time ?? time ?? '').trim() || null;
 
     let newPeopleNum = null;
-    if (new_people !== undefined && new_people !== null && new_people !== "") {
-      newPeopleNum = Number(new_people);
+    const peopleVal = new_people ?? people;
+    if (peopleVal !== undefined && peopleVal !== null && peopleVal !== "") {
+      newPeopleNum = Number(peopleVal);
     }
 
     // Deve esserci almeno un campo da modificare
@@ -63,7 +67,7 @@ module.exports = async function modifyBooking(req, res) {
     // VALIDAZIONE STRICT
     if (!restaurant_id || !booking_id || !hasAnyChange) {
       const errorMsg =
-        'restaurant_id, booking_id e almeno uno tra new_day, new_time, new_people sono obbligatori';
+        'restaurant_id, booking_id e almeno uno tra new_day, new_time, new_people (o alias day, time, people) sono obbligatori';
 
   logger.error('modify_booking_validation_error', {
     restaurant_id,

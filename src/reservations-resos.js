@@ -14,6 +14,7 @@
  */
 
 const { getRestaurantConfig } = require('./config/restaurants');
+const kb = require('./kb');
 const logger = require('./logger');
 const { DateTime } = require('luxon');
 
@@ -21,7 +22,19 @@ require('dotenv').config();
 
 const BASE_URL = (process.env.RESOS_BASE_URL || 'https://api.resos.com/v1').replace(/\/$/, '');
 const API_KEY = (process.env.RESOS_API_KEY || '').trim();
-const DEFAULT_DURATION = Math.max(1, parseInt(process.env.RESOS_DEFAULT_DURATION_MINUTES || '120', 10));
+const ENV_DEFAULT_DURATION = Math.max(1, parseInt(process.env.RESOS_DEFAULT_DURATION_MINUTES || '120', 10));
+
+/** Durata prenotazione in minuti: prima KB (avg_stay_minutes), poi .env RESOS_DEFAULT_DURATION_MINUTES. */
+function getDurationMinutes(restaurantId) {
+  try {
+    const info = kb.getRestaurantInfo(restaurantId);
+    const fromKb = Number(info && info.avg_stay_minutes);
+    if (Number.isFinite(fromKb) && fromKb >= 1) return Math.round(fromKb);
+  } catch {
+    // ignore
+  }
+  return ENV_DEFAULT_DURATION;
+}
 
 /**
  * RestaurantId da inviare a resOS. Usa sempre config.resos_restaurant_id se presente;
@@ -101,13 +114,14 @@ async function createReservation({
   try {
     const restId = getResOSRestaurantId(restaurantId);
     const timeStr = /^\d{1,2}:\d{2}(:\d{2})?$/.test(time) ? time.slice(0, 5) : `${time}:00`.slice(0, 5);
+    const durationMin = getDurationMinutes(restaurantId);
 
     const body = {
       restaurantId: restId,
       date: day,
       time: timeStr,
       people: Number(people) || 0,
-      duration: DEFAULT_DURATION,
+      duration: durationMin,
       source: 'phone',
       guest: {
         name: (name || '').trim() || 'Cliente',
@@ -171,6 +185,7 @@ async function listReservationsByPhone(restaurantId, phone) {
     const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime });
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
+    const now = DateTime.now().setZone(tz);
     const results = list
       .filter(r => String(r.restaurantId || r.restaurant_id || '') === restId)
       .filter(r => !normPhone || normalizePhone(r.guest?.phone || r.phone || '') === normPhone)
@@ -184,9 +199,13 @@ async function listReservationsByPhone(restaurantId, phone) {
         notes: r.notes ?? null
       }))
       .filter(b => {
-        if (!b.day) return false;
+        if (!b.day || !b.time) return false;
         const bookingDay = DateTime.fromISO(b.day, { zone: tz }).startOf('day');
-        return bookingDay.isValid && bookingDay >= today;
+        if (!bookingDay.isValid || bookingDay < today) return false;
+        if (bookingDay > today) return true;
+        const [h, m] = (b.time || '').split(':').map(Number);
+        const bookingStart = today.set({ hour: h || 0, minute: m || 0, second: 0, millisecond: 0 });
+        return bookingStart.isValid && bookingStart > now;
       });
 
     return { ok: true, results };

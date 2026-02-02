@@ -21,6 +21,7 @@
 
   "overrides": {
     "2027-01-01": { "closed": true },
+    "2026-02-14": { "closed": false, "dinner": ["19:00", "23:59"] },
     "2026-12-25": { "closed": true },
     "2026-12-31": { "closed": false, "dinner": ["19:00", "23:59"] }
    }
