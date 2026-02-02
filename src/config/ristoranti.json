@@ -6,7 +6,8 @@
     "calendar_id": "09855ac5f977a03d174f27c715e8f9d10a726b35b28e45a2da23b05e9b3cb106@group.calendar.google.com",
     "timezone": "Europe/Rome",
     "sms_number": "+39XXXXXXXXXX",
-    "max_people": 8
+    "max_people": 8,
+    "reservations_backend": "sheets"
   },
 
   "modena01": {
@@ -16,7 +17,9 @@
     "calendar_id": "c77a6143eead9a14cd98ea298796c80c363552c96bda74dc226444a041c183f1@group.calendar.google.com",
     "timezone": "Europe/Rome",
     "sms_number": "+39XXXXXXXXXX",
-    "max_people": 4
+    "max_people": 4,
+    "reservations_backend": "resos",
+    "resos_restaurant_id": "JLAs2CviunNCSEfbt"
   }
 }
 
