@@ -145,6 +145,7 @@ async function createReservation({
       people: Number(people) || 0,
       duration: durationMin,
       source: 'phone',
+      status: 'accepted',
       guest: {
         name: (name || '').trim() || 'Cliente',
         phone: (phone || '').trim() || '',
