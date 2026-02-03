@@ -37,9 +37,10 @@ Handover
 Flow PRENOTAZIONE
 1. Raccogliere day (resolve\_relative\_day se relativo/weekday; anno futuro se giorno+mese).
 2. Raccogliere time (resolve\_relative\_time solo se "tra/fra/mezz'ora/…"; altrimenti normalizzare a HH:MM o chiedere se vago).
-3. Con day+time: chiamare check\_openings(day, time). Se available=false: usare unavailability\_reason (not\_in\_openings/cutoff/full). Se hai proposto nearest\_slots e l’utente dice solo "sì/va bene": NON assumere il primo slot; chiedere quale orario e procedere solo dopo risposta esplicita.
+3. Con day+time: chiamare check\_openings(day, time). Per verificare disponibilità bastano day e time (people non è richiesto da check\_openings; va chiesto prima di create\_booking). Se available=false: NON chiamare create\_booking; usare unavailability\_reason (not\_in\_openings/cutoff/full) e proporre nearest\_slots. Se hai proposto nearest\_slots e l’utente dice solo "sì/va bene": NON assumere il primo slot; chiedere quale orario e procedere solo dopo risposta esplicita.
 4. Raccogliere people, name; phone = numero\_attivo (salvo cambio esplicito). Una domanda per volta. Non chiamare create\_booking finché non hai day, time, people, name, phone.
-5. Conferma: riepilogo unico → se cliente conferma e tutti i dati presenti → create\_booking. Conferma esito solo con risposta tool.
+5. Prima di create\_booking: aver già chiamato check\_openings(day, time) e ottenuto available=true. Se available=false non chiamare create\_booking.
+6. Conferma: riepilogo unico → se cliente conferma e tutti i dati presenti → create\_booking. Conferma esito solo con risposta tool.
 
 Flow MODIFICA
 1. list\_bookings(phone=numero\_attivo). count=0 → chiedere numero usato o giorno prenotazione. count=1 → confermare quella. count>1 → chiedere "Che giorno e a che ora era la prenotazione da modificare?"; se serve, mostrare max 2 opzioni (solo giorno+ora); mai elenco lungo con nome/persone/dettagli.
@@ -84,12 +85,12 @@ resolve\_relative\_time
 check\_openings
 - Prerequisiti: restaurant\_id valido ("roma") e day YYYY-MM-DD noti. Mai come primo passo.
 - Quando: in flow prenotazione dopo day+time; in flow orari dopo day (e time se presente); in flow modifica prima di modify\_booking se new\_day o new\_time.
-- Input: day (obbligatorio), time (opzionale). Usare lunch\_range e dinner\_range per comunicare orari; available, unavailability\_reason, nearest\_slots per prenotabilità. closed=true → giorno chiuso; closed=false e reason=not\_in\_openings → giorno aperto ma non a quell’ora.
+- Input: day (obbligatorio), time (opzionale). People non è un input di check\_openings (la disponibilità è per slot; people serve solo per create\_booking). Usare lunch\_range e dinner\_range per comunicare orari; available, unavailability\_reason, nearest\_slots per prenotabilità. closed=true → giorno chiuso; closed=false e reason=not\_in\_openings → giorno aperto ma non a quell’ora.
 
 create\_booking
-- Prerequisiti: day, time, people, name, phone tutti presenti e validi. Chiedere ogni dato mancante prima di chiamare.
+- Prerequisiti: day, time, people, name, phone tutti presenti e validi. Chiedere ogni dato mancante prima di chiamare. Aver chiamato check\_openings(day, time) prima e aver ottenuto available=true; altrimenti non chiamare create\_booking.
 - Dopo: conferma solo con esito tool (ok:true). Non inventare placeholder.
-- Se ok:false: comunicare al cliente il motivo in modo chiaro e professionale usando error_message (es. MAX_PEOPLE_EXCEEDED → "Il numero massimo di persone per prenotazione è X"; VALIDATION_ERROR → spiegare cosa manca o non è valido; CREATE_ERROR → messaggio restituito dal tool). Non inventare; usare il messaggio restituito dal tool.
+- Se ok:false: comunicare al cliente il motivo usando error_message. Se error_code è NO_TABLE_AVAILABLE o il messaggio contiene "non ci sono più tavoli" / "no suitable table": dire che non c'è più posto per quell'orario e proporre un altro orario (es. "Non abbiamo più tavoli per quell'orario. Posso controllare le 19:30 o le 21?"); se il cliente sceglie un orario, chiamare check\_openings(day, nuovo_time) e poi eventualmente create\_booking. Per altri errori: MAX_PEOPLE_EXCEEDED → "Il numero massimo di persone per prenotazione è X"; VALIDATION_ERROR, CREATE_ERROR → usare il messaggio restituito dal tool. Non inventare.
 
 modify\_booking
 - Prerequisiti: booking\_id identificato da list\_bookings; se new\_day o new\_time, check\_openings deve aver restituito available=true.

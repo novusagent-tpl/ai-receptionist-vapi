@@ -152,6 +152,15 @@ async function createReservation({
     };
   } catch (err) {
     logger.error('resos_create_error', { restaurant_id: restaurantId, message: err.message });
+    const msg = (err && err.message) ? String(err.message) : '';
+    // resOS 422 "no suitable table found" → messaggio chiaro per la receptionist
+    if (msg.toLowerCase().includes('no suitable table') || msg.includes('422')) {
+      return {
+        ok: false,
+        error_code: 'NO_TABLE_AVAILABLE',
+        error_message: 'Non ci sono più tavoli disponibili per quell\'orario. Posso proporle un altro orario?'
+      };
+    }
     return {
       ok: false,
       error_code: 'CREATE_ERROR',

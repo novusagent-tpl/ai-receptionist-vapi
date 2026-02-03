@@ -29,6 +29,8 @@ Verifica che gli orari e gli slot derivino dalla KB e che le risposte siano coer
 
 **Esito atteso:** `ok: true`, `closed: false`, `available: true` (o `false` se capacity piena), `requested_time: "20:00"`, `slots` contiene orari del giorno, `lunch_range` e `dinner_range` valorizzati. Nessun `error_code`.
 
+Esito: { "ok": true, "restaurant_id": "modena01", "day": "2026-02-05", "closed": false, "slots": [ "12:30", "13:00", "13:30", "14:00", "14:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30" ], "lunch_range": [ "12:30", "14:30" ], "dinner_range": [ "19:00", "22:30" ], "requested_time": "20:00", "available": true, "reason": null, "nearest_slots": [] }
+
 ---
 
 ### 1.2 Giorno chiuso (lunedì)
@@ -43,10 +45,11 @@ Verifica che gli orari e gli slot derivino dalla KB e che le risposte siano coer
 }
 ```
 
-**Cosa verifica:** 2 feb 2026 è lunedì → giorno chiuso in KB.
+**Cosa verifica:** 9 feb 2026 è lunedì → giorno chiuso in KB.
 
 **Esito atteso:** `ok: true`, `closed: true`, `slots: []` (o vuoti), nessuno slot prenotabile. Non deve esserci `available: true` per le 20:00.
 
+Esito: { "ok": true, "restaurant_id": "modena01", "day": "2026-02-09", "closed": true, "slots": [], "lunch_range": null, "dinner_range": null, "requested_time": "20:00", "available": false, "reason": "not_in_openings", "nearest_slots": [] }
 ---
 
 ### 1.3 Orario fuori slot (tra due slot – not_in_openings)
@@ -65,6 +68,7 @@ Verifica che gli orari e gli slot derivino dalla KB e che le risposte siano coer
 
 **Esito atteso:** `ok: true`, `closed: false`, `available: false`, `reason: "not_in_openings"` (o simile). `nearest_slots` dovrebbe contenere slot vicini (es. 19:00, 19:30). Così l’assistente può dire “non a quell’orario esatto, posso proporle le 19 o le 19 e 30”.
 
+Esito: { "ok": true, "restaurant_id": "modena01", "day": "2026-02-05", "closed": false, "slots": [ "12:30", "13:00", "13:30", "14:00", "14:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30" ], "lunch_range": [ "12:30", "14:30" ], "dinner_range": [ "19:00", "22:30" ], "requested_time": "19:20", "available": false, "reason": "not_in_openings", "nearest_slots": [ "19:30", "19:00", "20:00" ] }
 ---
 
 ### 1.4 Solo giorno, senza orario (solo info fasce)
@@ -82,6 +86,7 @@ Verifica che gli orari e gli slot derivino dalla KB e che le risposte siano coer
 
 **Esito atteso:** `ok: true`, `closed: false`, `lunch_range` e `dinner_range` presenti (es. `["12:30","14:30"]` e `["19:00","22:30"]`), `slots` popolato. `requested_time` assente o null.
 
+Esito: { "ok": true, "restaurant_id": "modena01", "day": "2026-02-05", "closed": false, "slots": [ "12:30", "13:00", "13:30", "14:00", "14:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00", "22:30" ], "lunch_range": [ "12:30", "14:30" ], "dinner_range": [ "19:00", "22:30" ], "requested_time": null, "available": null, "reason": null, "nearest_slots": null }
 ---
 
 ### 1.5 Validazione: manca restaurant_id o day
@@ -98,6 +103,7 @@ Verifica che gli orari e gli slot derivino dalla KB e che le risposte siano coer
 
 Ripetere senza `restaurant_id` (solo `day`) per verificare lo stesso tipo di errore.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restaurant_id e day sono obbligatori" }
 ---
 
 ## 2. create_booking – Creazione prenotazione
@@ -124,6 +130,9 @@ Usare un numero di telefono dedicato ai test (es. `+395671234567`) per non misch
 **Esito atteso:** `ok: true`, `booking_id` presente, `day`, `time`, `people`, `name`, `phone` coerenti. Con resOS la prenotazione compare nel gestionale (e la durata dovrebbe essere quella da KB `avg_stay_minutes` o da .env, es. 60 min).
 
 **Nota:** Salva il `booking_id` per i test su modify e cancel (es. `QGCiM8xiHJzCSc6a4`).
+
+Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+395671234567", "notes": null, "event_id": null }
+
 
 ---
 
