@@ -131,10 +131,9 @@ Usare un numero di telefono dedicato ai test (es. `+391233211234`) per non misch
 
 **Nota:** Salva il `booking_id` per i test su modify e cancel (es. `QGCiM8xiHJzCSc6a4`).
 
-Esito: { "ok": true, "day": "2026-02-06", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+391233211234", "notes": null, "event_id": null }
+Esito: { "ok": true, "booking_id": "ZdyNcRYYsvsrTZbuj", "day": "2026-02-06", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+391233211234", "notes": null, "event_id": null }
 
-Osservazione: Perché booking id non è presente? Inoltre un altra cosa che ho visto sempre e che se creo una prenotazione su resos funziona e appare nel gestionale però è come richiesta e lo stato è: Richiesta, è non Accettata. Per cambiare lo stato in accettata bisogna premere accetta o salva prenotazione, questa è una regola del gestionale o un problema del backend ?
-
+*Nota:* su resOS la prenotazione appare come "Richiesta"; per passarla ad "Accettata" il ristorante deve confermarla dal gestionale. È comportamento resOS, non del backend.
 ---
 
 ### 2.2 Max persone superato (regola KB)

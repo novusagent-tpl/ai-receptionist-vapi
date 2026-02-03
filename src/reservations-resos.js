@@ -155,13 +155,55 @@ async function createReservation({
     const data = await api('POST', '/bookings', body);
     let id = extractBookingId(data);
 
-    // Fallback: se resOS non restituisce l'id nella risposta POST, recuperiamolo da list_bookings
+    // Fallback: solo se resOS non restituisce l'id nella risposta POST.
+    // Match strettissimo: day + time + phone. Fail hard se 0 o >1 match (non deterministico).
     if (!id) {
       const byPhone = await listReservationsByPhone(restaurantId, phone);
-      if (byPhone.ok && Array.isArray(byPhone.results)) {
-        const found = byPhone.results.find(b => b.day === day && (b.time || '').slice(0, 5) === timeStr);
-        if (found) id = found.booking_id;
+      if (!byPhone.ok || !Array.isArray(byPhone.results)) {
+        logger.error('resos_create_fallback_fail', {
+          restaurant_id: restaurantId,
+          day,
+          time: timeStr,
+          phone,
+          reason: 'list_by_phone_failed'
+        });
+        return {
+          ok: false,
+          error_code: 'PROVIDER_ERROR',
+          error_message: 'Prenotazione creata su resOS ma non è stato possibile recuperare l\'id. Riprova o contatta il ristorante.'
+        };
       }
+      const matches = byPhone.results.filter(b => b.day === day && (b.time || '').slice(0, 5) === timeStr);
+      if (matches.length === 0) {
+        logger.error('resos_create_fallback_fail', {
+          restaurant_id: restaurantId,
+          day,
+          time: timeStr,
+          phone,
+          reason: 'no_match'
+        });
+        return {
+          ok: false,
+          error_code: 'PROVIDER_ERROR',
+          error_message: 'Prenotazione creata su resOS ma non è stato possibile recuperare l\'id. Riprova o contatta il ristorante.'
+        };
+      }
+      if (matches.length > 1) {
+        logger.error('resos_create_fallback_fail', {
+          restaurant_id: restaurantId,
+          day,
+          time: timeStr,
+          phone,
+          reason: 'ambiguous',
+          match_count: matches.length
+        });
+        return {
+          ok: false,
+          error_code: 'PROVIDER_ERROR',
+          error_message: 'Prenotazione creata su resOS ma risposta ambigua. Contatta il ristorante per conferma.'
+        };
+      }
+      id = matches[0].booking_id;
     }
 
     logger.info('resos_create_reservation', {
@@ -172,7 +214,7 @@ async function createReservation({
 
     return {
       ok: true,
-      booking_id: id ?? null,
+      booking_id: id,
       day,
       time: timeStr,
       people: body.people,
