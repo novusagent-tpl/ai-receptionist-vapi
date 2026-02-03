@@ -145,7 +145,7 @@ async function createReservation({
       people: Number(people) || 0,
       duration: durationMin,
       source: 'phone',
-      status: 'accepted',
+      status: 'approved',
       guest: {
         name: (name || '').trim() || 'Cliente',
         phone: (phone || '').trim() || '',
@@ -240,8 +240,8 @@ async function createReservation({
   } catch (err) {
     logger.error('resos_create_error', { restaurant_id: restaurantId, message: err.message });
     const msg = (err && err.message) ? String(err.message) : '';
-    // resOS 422 "no suitable table found" → messaggio chiaro per la receptionist
-    if (msg.toLowerCase().includes('no suitable table') || msg.includes('422')) {
+    // resOS "no suitable table found" → messaggio chiaro per la receptionist (no mapping generico 422)
+    if (msg.toLowerCase().includes('no suitable table')) {
       return {
         ok: false,
         error_code: 'NO_TABLE_AVAILABLE',
