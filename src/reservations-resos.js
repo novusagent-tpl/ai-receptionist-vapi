@@ -92,6 +92,28 @@ function normalizePhone(p) {
 }
 
 /**
+ * Estrae l'id della prenotazione dalla risposta resOS (possibili strutture).
+ * resOS può restituire: { _id }, { id }, { booking: { _id } }, { data: { _id } }, ecc.
+ */
+function extractBookingId(data) {
+  if (!data || typeof data !== 'object') return null;
+  const candidates = [
+    data._id,
+    data.id,
+    data.booking?._id,
+    data.booking?.id,
+    data.data?._id,
+    data.data?.id,
+    data.result?._id,
+    data.result?.id
+  ];
+  for (const c of candidates) {
+    if (c && typeof c === 'string' && c.trim()) return c.trim();
+  }
+  return null;
+}
+
+/**
  * Crea una prenotazione. Stessa firma di reservations.createReservation.
  * Body whitelist: restaurantId, date, time, people, duration, source, guest.
  */
@@ -131,7 +153,16 @@ async function createReservation({
     };
 
     const data = await api('POST', '/bookings', body);
-    const id = data._id ?? data.id;
+    let id = extractBookingId(data);
+
+    // Fallback: se resOS non restituisce l'id nella risposta POST, recuperiamolo da list_bookings
+    if (!id) {
+      const byPhone = await listReservationsByPhone(restaurantId, phone);
+      if (byPhone.ok && Array.isArray(byPhone.results)) {
+        const found = byPhone.results.find(b => b.day === day && (b.time || '').slice(0, 5) === timeStr);
+        if (found) id = found.booking_id;
+      }
+    }
 
     logger.info('resos_create_reservation', {
       restaurant_id: restaurantId,
@@ -141,7 +172,7 @@ async function createReservation({
 
     return {
       ok: true,
-      booking_id: id,
+      booking_id: id ?? null,
       day,
       time: timeStr,
       people: body.people,

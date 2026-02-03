@@ -108,7 +108,7 @@ Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restau
 
 ## 2. create_booking – Creazione prenotazione
 
-Usare un numero di telefono dedicato ai test (es. `+395671234567`) per non mischiare con prenotazioni reali.
+Usare un numero di telefono dedicato ai test (es. `+391233211234`) per non mischiare con prenotazioni reali.
 
 ### 2.1 Creazione corretta
 
@@ -117,11 +117,11 @@ Usare un numero di telefono dedicato ai test (es. `+395671234567`) per non misch
 ```json
 {
   "restaurant_id": "modena01",
-  "day": "2026-02-05",
+  "day": "2026-02-06",
   "time": "20:00",
   "people": 2,
   "name": "Test Postman",
-  "phone": "+395671234567"
+  "phone": "+391233211234"
 }
 ```
 
@@ -131,8 +131,9 @@ Usare un numero di telefono dedicato ai test (es. `+395671234567`) per non misch
 
 **Nota:** Salva il `booking_id` per i test su modify e cancel (es. `QGCiM8xiHJzCSc6a4`).
 
-Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+395671234567", "notes": null, "event_id": null }
+Esito: { "ok": true, "day": "2026-02-06", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+391233211234", "notes": null, "event_id": null }
 
+Osservazione: Perché booking id non è presente? Inoltre un altra cosa che ho visto sempre e che se creo una prenotazione su resos funziona e appare nel gestionale però è come richiesta e lo stato è: Richiesta, è non Accettata. Per cambiare lo stato in accettata bisogna premere accetta o salva prenotazione, questa è una regola del gestionale o un problema del backend ?
 
 ---
 
@@ -143,11 +144,11 @@ Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": 
 ```json
 {
   "restaurant_id": "modena01",
-  "day": "2026-02-05",
+  "day": "2026-02-06",
   "time": "20:30",
   "people": 5,
   "name": "Test Max People",
-  "phone": "+395671234567"
+  "phone": "+391233211234"
 }
 ```
 
@@ -155,6 +156,7 @@ Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": 
 
 **Esito atteso:** `ok: false`, `error_code: "MAX_PEOPLE_EXCEEDED"`, `error_message` tipo “Numero massimo persone per prenotazione: 4”. L’assistente userà questo messaggio per comunicare al cliente il limite.
 
+Esito: { "ok": false, "error_code": "MAX_PEOPLE_EXCEEDED", "error_message": "Numero massimo persone per prenotazione: 4" }
 ---
 
 ### 2.3 Validazione: campi obbligatori mancanti
@@ -164,7 +166,7 @@ Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": 
 ```json
 {
   "restaurant_id": "modena01",
-  "day": "2026-02-05",
+  "day": "2026-02-06",
   "time": "20:00",
   "people": 2,
   "name": "Test"
@@ -175,35 +177,47 @@ Esito: { "ok": true, "day": "2026-02-05", "time": "20:00", "people": 2, "name": 
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, `error_message` che indica che sono obbligatori restaurant_id, day, time, people (>0), name, phone.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restaurant_id, day, time, people (>0), name, phone sono obbligatori" }
 ---
 
 ### 2.4 Data nel passato
 
 **POST** `/api/create_booking`
 
-Sostituire `day` con una data passata (es. `2024-01-01`).
+Sostituire `day` con una data passata (es. `2026-01-01`).
 
 ```json
 {
   "restaurant_id": "modena01",
-  "day": "2024-01-01",
+  "day": "2026-01-01",
   "time": "20:00",
   "people": 2,
   "name": "Test Passato",
-  "phone": "+395671234567"
+  "phone": "+391233211234"
 }
 ```
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, messaggio tipo “Non è possibile prenotare per una data nel passato”.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "Non è possibile prenotare per una data nel passato." }
 ---
 
 ### 2.5 Orario già passato (stesso giorno)
+json:
+{
+  "restaurant_id": "modena01",
+  "day": "2026-02-03",
+  "time": "20:00",
+  "people": 2,
+  "name": "Test Passato Stesso Giorno",
+  "phone": "+391233211234"
+}
 
 Solo se esegui il test “dopo” l’orario indicato: usare un `day` = oggi e un `time` già passato (es. se sono le 22:00, usare `"time": "12:00"` per il pranzo).
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, messaggio tipo “L’orario indicato è già passato”.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "L’orario indicato è già passato." }
 ---
 
 ## 3. list_bookings – Elenco per telefono
@@ -215,7 +229,7 @@ Solo se esegui il test “dopo” l’orario indicato: usare un `day` = oggi e u
 ```json
 {
   "restaurant_id": "modena01",
-  "phone": "+395671234567"
+  "phone": "+391233211234"
 }
 ```
 
@@ -223,6 +237,9 @@ Solo se esegui il test “dopo” l’orario indicato: usare un `day` = oggi e u
 
 **Esito atteso:** `ok: true`, `results` array. Ogni elemento ha `booking_id`, `day`, `time`, `people`, `name`, `phone`. Solo prenotazioni future (o stesso giorno con orario ancora da venire).
 
+#ora sono le 19:50 quindi ok: 
+
+Esito: { "ok": true, "results": [ { "booking_id": "yE3bfpfzYxodgRiMB", "day": "2026-02-03", "time": "20:00", "people": 2, "name": "Test Passato Stesso Giorno", "phone": "+391233211234", "notes": null }, { "booking_id": "rtgLgBaqEiu8LaeJF", "day": "2026-02-03", "time": "21:00", "people": 2, "name": "Test Passato Stesso Giorno", "phone": "+391233211234", "notes": null }, { "booking_id": "ZdyNcRYYsvsrTZbuj", "day": "2026-02-06", "time": "20:00", "people": 2, "name": "Test Postman", "phone": "+391233211234", "notes": null } ] }
 ---
 
 ### 3.2 Telefono senza prenotazioni
@@ -238,6 +255,7 @@ Solo se esegui il test “dopo” l’orario indicato: usare un `day` = oggi e u
 
 **Esito atteso:** `ok: true`, `results: []` (o array vuoto). Nessun errore.
 
+Esito: {"ok": true,"results": []}
 ---
 
 ### 3.3 Validazione: manca phone o restaurant_id
@@ -252,6 +270,7 @@ Solo se esegui il test “dopo” l’orario indicato: usare un `day` = oggi e u
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, messaggio che indica che restaurant_id e phone sono obbligatori.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restaurant_id e phone sono obbligatori" }
 ---
 
 ## 4. modify_booking – Modifica prenotazione
@@ -265,7 +284,7 @@ Usare un `booking_id` reale ottenuto da create_booking o list_bookings.
 ```json
 {
   "restaurant_id": "modena01",
-  "booking_id": "QGCiM8xiHJzCSc6a4",
+  "booking_id": "yE3bfpfzYxodgRiMB",
   "people": 3
 }
 ```
@@ -276,6 +295,9 @@ Sostituire `QGCiM8xiHJzCSc6a4` con un `booking_id` valido.
 
 **Esito atteso:** `ok: true`, risposta con esito della modifica (o conferma). Se il backend restituisce dettagli (day, time, people), devono essere coerenti.
 
+Esito: { "ok": true, "booking_id": "yE3bfpfzYxodgRiMB", "people": 3, "name": null, "phone": null, "notes": null }
+
+Ossrrvazione: Una cosa che ho osseravto è che se cancello la prenotazione da resos e poi faccio sta cosa di modificarla il sistema la modifica con succeso anche se non c'è nessuna prenotazione, questo è un problema o non si può arrivare a questa cosa visto che il cliente deve dare il numero e poi il sistema cerca la prenotazione in base al numero ? non come qui che ha direttamente il booking_id
 ---
 
 ### 4.2 Modifica data e orario (alias `day` e `time`)
@@ -285,7 +307,7 @@ Sostituire `QGCiM8xiHJzCSc6a4` con un `booking_id` valido.
 ```json
 {
   "restaurant_id": "modena01",
-  "booking_id": "QGCiM8xiHJzCSc6a4",
+  "booking_id": "yE3bfpfzYxodgRiMB",
   "day": "2026-02-06",
   "time": "21:00"
 }
@@ -297,6 +319,8 @@ Sostituire `booking_id` con uno valido. Verificare che il 6 feb 2026 sia aperto 
 
 **Esito atteso:** `ok: true`. La prenotazione sul gestionale deve risultare spostata al nuovo giorno/orario.
 
+Esito: { "ok": true, "booking_id": "yE3bfpfzYxodgRiMB", "day": "2026-02-06", "time": "21:00", "name": null, "phone": null, "notes": null }
+
 ---
 
 ### 4.3 Modifica con nomi “ufficiali” (new_day, new_time, new_people)
@@ -306,7 +330,7 @@ Sostituire `booking_id` con uno valido. Verificare che il 6 feb 2026 sia aperto 
 ```json
 {
   "restaurant_id": "modena01",
-  "booking_id": "QGCiM8xiHJzCSc6a4",
+  "booking_id": "LuiSsqJuth2SSFWmM",
   "new_day": "2026-02-07",
   "new_time": "20:30",
   "new_people": 2
@@ -317,6 +341,8 @@ Sostituire `booking_id` con uno valido. Verificare che il 6 feb 2026 sia aperto 
 
 **Esito atteso:** `ok: true`.
 
+Esito: { "ok": true, "booking_id": "LuiSsqJuth2SSFWmM", "day": "2026-02-07", "time": "20:30", "people": 2, "name": null, "phone": null, "notes": null }
+
 ---
 
 ### 4.4 Validazione: nessuna modifica (manca booking_id o tutti i campi modifica)
@@ -326,7 +352,7 @@ Sostituire `booking_id` con uno valido. Verificare che il 6 feb 2026 sia aperto 
 ```json
 {
   "restaurant_id": "modena01",
-  "booking_id": "QGCiM8xiHJzCSc6a4"
+  "booking_id": "LuiSsqJuth2SSFWmM"
 }
 ```
 
@@ -338,6 +364,7 @@ Con **booking_id mancante** (solo restaurant_id e people):
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, messaggio che indica che restaurant_id e booking_id sono obbligatori (e almeno un campo da modificare).
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restaurant_id, booking_id e almeno uno tra new_day, new_time, new_people (o alias day, time, people) sono obbligatori" }
 ---
 
 ## 5. cancel_booking – Cancellazione
@@ -349,7 +376,7 @@ Con **booking_id mancante** (solo restaurant_id e people):
 ```json
 {
   "restaurant_id": "modena01",
-  "booking_id": "QGCiM8xiHJzCSc6a4"
+  "booking_id": "LuiSsqJuth2SSFWmM"
 }
 ```
 
@@ -358,6 +385,8 @@ Sostituire `booking_id` con uno valido (puoi usare una prenotazione creata appos
 **Cosa verifica:** Cancellazione sul backend (resOS: PUT con status canceled).
 
 **Esito atteso:** `ok: true`, `canceled: true`, `booking_id` presente. La prenotazione non deve più comparire in list_bookings per quel telefono.
+
+Esito: { "ok": true, "booking_id": "LuiSsqJuth2SSFWmM", "canceled": true }
 
 ---
 
@@ -373,6 +402,7 @@ Sostituire `booking_id` con uno valido (puoi usare una prenotazione creata appos
 
 **Esito atteso:** `ok: false`, `error_code: "VALIDATION_ERROR"`, messaggio che indica che restaurant_id e booking_id sono obbligatori.
 
+Esito: { "ok": false, "error_code": "VALIDATION_ERROR", "error_message": "restaurant_id e booking_id sono obbligatori" }
 ---
 
 ## 6. Flusso completo consigliato
