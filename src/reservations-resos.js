@@ -152,6 +152,19 @@ async function createReservation({
       }
     };
 
+    // Controllo preventivo: evita duplicati (stesso telefono, giorno, orario)
+    const existing = await listReservationsByPhone(restaurantId, phone);
+    if (existing.ok && Array.isArray(existing.results)) {
+      const duplicate = existing.results.find(b => b.day === day && (b.time || '').slice(0, 5) === timeStr);
+      if (duplicate) {
+        return {
+          ok: false,
+          error_code: 'DUPLICATE_BOOKING',
+          error_message: 'Esiste già una prenotazione per questo telefono in data ' + day + ' alle ' + timeStr + '. Controlla le tue prenotazioni o modifica quella esistente.'
+        };
+      }
+    }
+
     const data = await api('POST', '/bookings', body);
     let id = extractBookingId(data);
 
