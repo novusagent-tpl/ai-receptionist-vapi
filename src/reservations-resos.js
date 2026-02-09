@@ -56,6 +56,8 @@ function getAuthHeader() {
   return { Authorization: `Basic ${encoded}` };
 }
 
+const API_TIMEOUT_MS = 15000; // 15 secondi timeout per chiamate resOS
+
 async function api(method, path, body = null, query = {}) {
   const qs = new URLSearchParams(query).toString();
   const url = path.startsWith('http') ? path : `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}${qs ? `?${qs}` : ''}`;
@@ -64,12 +66,40 @@ async function api(method, path, body = null, query = {}) {
     headers: {
       ...getAuthHeader(),
       'Content-Type': 'application/json'
-    }
+    },
+    signal: AbortSignal.timeout(API_TIMEOUT_MS)
   };
   if (body && (method === 'POST' || method === 'PUT')) {
     opts.body = JSON.stringify(body);
   }
-  const res = await fetch(url, opts);
+
+  let res;
+  try {
+    res = await fetch(url, opts);
+  } catch (fetchErr) {
+    // Timeout o errore di rete
+    if (fetchErr.name === 'TimeoutError' || fetchErr.name === 'AbortError') {
+      logger.error('resos_api_timeout', {
+        method,
+        path,
+        timeout_ms: API_TIMEOUT_MS,
+        message: `resOS API timeout dopo ${API_TIMEOUT_MS}ms`,
+      });
+      const err = new Error(`resOS API timeout dopo ${API_TIMEOUT_MS}ms`);
+      err.code = 'PROVIDER_UNAVAILABLE';
+      throw err;
+    }
+    // Errore di rete (DNS, connessione rifiutata, ecc.)
+    logger.error('resos_api_network_error', {
+      method,
+      path,
+      message: fetchErr.message,
+    });
+    const err = new Error(`resOS API non raggiungibile: ${fetchErr.message}`);
+    err.code = 'PROVIDER_UNAVAILABLE';
+    throw err;
+  }
+
   const text = await res.text();
   let json = null;
   try {
@@ -239,6 +269,14 @@ async function createReservation({
     };
   } catch (err) {
     logger.error('resos_create_error', { restaurant_id: restaurantId, message: err.message });
+    // Timeout / rete → PROVIDER_UNAVAILABLE
+    if (err.code === 'PROVIDER_UNAVAILABLE') {
+      return {
+        ok: false,
+        error_code: 'PROVIDER_UNAVAILABLE',
+        error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.'
+      };
+    }
     const msg = (err && err.message) ? String(err.message) : '';
     // resOS "no suitable table found" → messaggio chiaro per la receptionist (no mapping generico 422)
     if (msg.toLowerCase().includes('no suitable table')) {
@@ -307,6 +345,9 @@ async function listReservationsByPhone(restaurantId, phone) {
     return { ok: true, results };
   } catch (err) {
     logger.error('resos_list_phone_error', { restaurant_id: restaurantId, message: err.message });
+    if (err.code === 'PROVIDER_UNAVAILABLE') {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: 'LIST_ERROR',
@@ -352,6 +393,9 @@ async function listReservationsByDay(restaurantId, dayISO) {
     return { ok: true, results };
   } catch (err) {
     logger.error('resos_list_day_error', { restaurant_id: restaurantId, message: err.message });
+    if (err.code === 'PROVIDER_UNAVAILABLE') {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: 'LIST_BY_DAY_ERROR',
@@ -400,6 +444,9 @@ async function updateReservation(restaurantId, bookingId, fields) {
       notes: null
     };
   } catch (err) {
+    if (err.code === 'PROVIDER_UNAVAILABLE') {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     if (err.message.includes('404')) {
       return {
         ok: false,
@@ -438,6 +485,9 @@ async function deleteReservation(restaurantId, bookingId) {
       canceled: true
     };
   } catch (err) {
+    if (err.code === 'PROVIDER_UNAVAILABLE') {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     if (err.message.includes('404')) {
       return {
         ok: false,

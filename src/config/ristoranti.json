@@ -7,7 +7,8 @@
     "timezone": "Europe/Rome",
     "sms_number": "+39XXXXXXXXXX",
     "max_people": 8,
-    "reservations_backend": "sheets"
+    "reservations_backend": "sheets",
+    "prompt_version": "v1.0"
   },
 
   "modena01": {
@@ -19,7 +20,8 @@
     "sms_number": "+39XXXXXXXXXX",
     "max_people": 4,
     "reservations_backend": "resos",
-    "resos_restaurant_id": "JLAs2CviunNCSEfbt"
+    "resos_restaurant_id": "JLAs2CviunNCSEfbt",
+    "prompt_version": "v1.0"
   }
 }
 

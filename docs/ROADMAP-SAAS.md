@@ -1,0 +1,567 @@
+# ROADMAP → SaaS Vendibile
+
+Checklist completa per arrivare alla versione finale vendibile.
+Da completare **prima** dei test Vapi e del lancio.
+
+---
+
+## FASE A — SOLIDIFICARE IL BACKEND (Priorità ALTA)
+
+### A1. Prompt hardening "a tavolino"
+**Obiettivo:** Eliminare bug logici nei prompt senza fare chiamate.
+
+**Regole obbligatorie (verificare nei prompt):**
+
+- [ ] Ordine tool obbligatorio: `check_openings` → `create_booking`
+- [ ] Mai `create_booking` se `available=false`
+- [ ] `people` richiesto prima di `create_booking` (nota: `check_openings` può funzionare anche senza people per dare info sugli orari, ma per prenotare serve sempre)
+- [ ] Mapping errori completo:
+  - `MAX_PEOPLE_EXCEEDED` → "Accettiamo massimo X persone"
+  - `NO_TABLE_AVAILABLE` → "Non ci sono tavoli disponibili, propongo altro orario"
+  - `CREATE_ERROR` → "Non riesco a completare, posso metterla in contatto col ristorante"
+  - `DUPLICATE_BOOKING` → "Esiste già una prenotazione con questi dati"
+  - `PROVIDER_UNAVAILABLE` → "Sistema temporaneamente non disponibile, handover"
+- [ ] Handover: `is_open_now` prima di transfer
+- [ ] Numero telefono: usare quello dettato se diverso da caller
+
+**Divieti espliciti (devono essere nel prompt):**
+
+- [ ] ❌ MAI anticipare conferme prima di `create_booking ok:true`
+- [ ] ❌ MAI inventare disponibilità (solo `check_openings` è fonte di verità)
+- [ ] ❌ MAI saltare `check_openings` prima di `create_booking`
+- [ ] ❌ MAI assumere slot se cliente dice "va bene" senza specificare quale
+
+**Output:** Prompt finali "frozen" (`System-Prompt-Receptionist_modena01.md`, `System-Prompt-ReceptionistV2.md`)
+
+**Status:** ✅ Completato (2026-02-03)
+
+---
+
+### A2. Tools Contract (documentazione API)
+**Obiettivo:** Zero ambiguità sui contratti delle API.
+
+Creare `docs/TOOLS-CONTRACT.md` con:
+
+- [ ] `check_openings` → input/output/errori
+- [ ] `create_booking` → sempre ritorna `booking_id` (o errore)
+- [ ] `modify_booking` → accetta booking_id, normalizza output
+- [ ] `list_bookings` → mai prenotazioni passate/cancellate
+- [ ] `cancel_booking` → idempotente (se già cancellata, ok)
+- [ ] `faq` → `answer:null` = fallback "non ho questa informazione"
+- [ ] `is_open_now` → usato per handover
+- [ ] `resolve_relative_day` / `resolve_relative_time` → formato output
+
+**Output:** `docs/TOOLS-CONTRACT.md`
+
+**Status:** ✅ Completato (2026-02-03)
+
+---
+
+### A3. Logging production-grade
+**Obiettivo:** Capire cosa succede in produzione.
+
+Verificare/aggiungere in `src/logger.js`:
+
+- [ ] `request_id` univoco per ogni chiamata
+- [ ] `restaurant_id` (tenant) in ogni log
+- [ ] `tool_name` + `payload` + `esito` per ogni tool call
+- [ ] `error_code` standardizzati
+- [ ] Timestamp ISO
+- [ ] `conversation_id` (da Vapi)
+- [ ] `call_id` (Twilio/Vapi)
+- [ ] `backend_used` (sheets / resos / octotable)
+- [ ] `prompt_version` (vedi A7)
+
+**Output:** Logger aggiornato
+
+**Status:** ✅ Completato (2026-02-03)
+
+---
+
+### A4. Error taxonomy & mapping definitivo
+**Obiettivo:** Elenco chiuso di error_code, zero errori "raw" in produzione.
+
+**Error codes ammessi:**
+
+| Code | Origine | Messaggio user-facing | Azione assistente |
+|------|---------|----------------------|-------------------|
+| `MAX_PEOPLE_EXCEEDED` | KB | "Accettiamo massimo X persone per prenotazione" | Chiedere se dividere |
+| `NO_TABLE_AVAILABLE` | Provider | "Non ci sono tavoli disponibili per quell'orario" | Proporre altro slot |
+| `DUPLICATE_BOOKING` | Backend | "Esiste già una prenotazione con questi dati" | Chiedere se modificare |
+| `CREATE_ERROR` | Provider | "Non riesco a completare la prenotazione" | Proporre retry o handover |
+| `UPDATE_ERROR` | Provider | "Non riesco a modificare la prenotazione" | Handover |
+| `DELETE_ERROR` | Provider | "Non riesco a cancellare la prenotazione" | Handover |
+| `BOOKING_NOT_FOUND` | Backend | "Non trovo questa prenotazione" | Chiedere altro riferimento |
+| `VALIDATION_ERROR` | Backend | "Dati non validi" | Chiedere correzione |
+| `PROVIDER_UNAVAILABLE` | Provider | "Sistema temporaneamente non disponibile" | Scuse + handover |
+| `PROVIDER_ERROR` | Provider | "Errore tecnico" | Scuse + handover |
+
+Checklist:
+- [x] Tutti gli error_code nel backend mappano a questa lista (verificato in A2)
+- [x] Nessun messaggio tecnico esposto all'utente (codici tecnici non nel prompt)
+- [x] Ogni errore ha azione definita (documentato in TOOLS-CONTRACT.md)
+- [ ] `PROVIDER_UNAVAILABLE` → da implementare nel backend in A6
+
+**Output:** Tabella sopra documentata in `TOOLS-CONTRACT.md`
+
+**Status:** ✅ Completato (2026-02-03) — tranne PROVIDER_UNAVAILABLE (→ A6)
+
+---
+
+### A5. Idempotenza create_booking
+**Obiettivo:** Stesso phone + day + time + restaurant_id = no doppia prenotazione.
+
+Comportamento richiesto:
+- Se prenotazione identica esiste → ritorna `DUPLICATE_BOOKING`
+- NON creare seconda prenotazione
+
+Checklist:
+- [x] Implementato in `reservations-resos.js` (check preventivo con `listReservationsByPhone`)
+- [x] Implementato in `reservations-sheets.js` (stesso pattern: check prima di create)
+- [x] Documentato in `TOOLS-CONTRACT.md`
+
+**Status:** ✅ Completato (2026-02-06)
+
+---
+
+### A6. Provider health check & timeout
+**Obiettivo:** Gestire down di resOS/Google senza bloccare l'assistente.
+
+Checklist:
+- [ ] Timeout configurato per chiamate API (es. 10s)
+- [ ] Timeout → error_code `PROVIDER_UNAVAILABLE`
+- [ ] Assistente: scuse + handover (se aperto) o "riprovi più tardi"
+- [ ] Log dedicato per timeout/errori provider
+
+**Output:** Timeout implementato, error handling aggiornato
+
+**Status:** ✅ Completato (2026-02-06)
+
+---
+
+### A7a. Transfer tool per-tenant (TODO)
+**Obiettivo:** Ogni ristorante deve avere il proprio tool di transfer su Vapi.
+
+- [ ] Creare `transfer_call_tool_<restaurant_id>` per ogni ristorante su Vapi
+- [ ] Aggiornare ogni system prompt con il nome tool corretto
+- [ ] Attualmente `transfer_call_tool_roma` è usato anche per modena01 (solo test)
+- [ ] **NON andare in produzione senza questo fix**
+
+**Status:** [ ] Da fare (prima del primo cliente reale)
+
+---
+
+### A7. Prompt versioning
+**Obiettivo:** Sapere con quale prompt è stata gestita ogni chiamata.
+
+Checklist:
+- [x] Versione nel filename o header del prompt (es. `v1.3`) → aggiunto `(v1.0)` nel titolo di entrambi i prompt
+- [x] Loggare `prompt_version` a ogni chiamata (vedi A3) → aggiunto `prompt_version` in `ristoranti.json` + middleware logga con ogni request
+- [x] Changelog minimo quando si modifica un prompt → tabella Changelog aggiunta in fondo a entrambi i prompt
+
+**Output:** Prompt versionati, log aggiornato
+
+**Status:** [x] Completato (2026-02-06)
+
+---
+
+### A8. Regression tests API (senza voce)
+**Obiettivo:** Suite di test automatici che chiamano gli endpoint tools con casi noti, per non rompere resOS/Sheets quando si tocca backend/prompt.
+
+Creato `scripts/regression-tests.js`:
+
+- [x] `check_openings` → giorno aperto, giorno chiuso, orario in slot, orario fuori slot, override (Natale), validazione (manca restaurant_id, manca day, formato errato day/time)
+- [x] `create_booking` → validazione (manca restaurant_id, manca day, manca phone, MAX_PEOPLE_EXCEEDED)
+- [x] `list_bookings` → validazione (manca restaurant_id, manca phone)
+- [x] `modify_booking` → validazione (manca restaurant_id, manca booking_id)
+- [x] `cancel_booking` → validazione (manca restaurant_id, manca booking_id)
+- [x] `faq` → match esatto, match fuzzy, nessun match, validazione
+- [x] `is_open_now` → modena01, roma, manca restaurant_id
+- [x] `resolve_relative_day` → domani, oggi, dopodomani, sabato, tra 3 giorni, non riconosciuto, manca text
+- [x] `resolve_relative_time` → tra mezz'ora, tra 2 ore, tra 30 minuti, orario vago, non relativo, manca text
+
+Eseguibile con `npm test` o `node scripts/regression-tests.js [BASE_URL]` prima di ogni deploy.
+
+**Output:** Script test + report pass/fail con colori
+
+**Come testare:**
+1. Avvia il server in locale: `npm run dev`
+2. In un altro terminale: `npm test` (oppure `node scripts/regression-tests.js`)
+3. Per testare su Render: `node scripts/regression-tests.js https://tuo-deploy.onrender.com`
+4. Verde = PASS, Rosso = FAIL. Se tutto verde → puoi fare deploy tranquillo.
+
+**Nuovo gestionale/ristorante:** I test esistenti non vanno toccati. Basta aggiungere nuovi test nello stesso file per il nuovo `restaurant_id` (copiare i test esistenti e cambiare l'ID).
+
+**In breve:** Questo script serve a verificare in 10 secondi che tutto il backend funzioni prima di ogni deploy, così non si va online con bug.
+
+**Status:** [x] Completato (2026-02-09)
+
+---
+
+### A9. Monitoring & alerting (oltre il logging)
+**Obiettivo:** Logging ≠ osservabilità. Serve sapere in tempo reale se qualcosa va storto.
+
+Creato `src/metrics.js` + endpoint `GET /metrics` + middleware di tracking:
+
+Metriche tracciate:
+- [x] Error rate per ristorante (% chiamate con errore)
+- [x] Latency media per tool call
+- [x] Provider failures (resOS/Google down) — con conteggio ultimi 5 min
+- [x] Handover count (proxy via is_open_now)
+- [x] Tasso prenotazioni riuscite vs tentate (booking_success_rate_percent)
+
+Alerting (log automatici):
+- [x] ALERT_HIGH_ERROR_RATE → se error rate > 25% (dopo minimo 10 richieste)
+- [x] ALERT_PROVIDER_DOWN → se >=3 provider failure in 5 minuti
+
+**Come usare:** Visita `https://tuo-deploy.onrender.com/metrics` per vedere tutte le metriche in JSON (globali, per ristorante, per tool).
+
+**In breve:** Endpoint che mostra in tempo reale quante richieste ci sono, quanti errori, quanto è veloce ogni tool, e se un provider è giù. Alert automatici nei log.
+
+**Output:** `src/metrics.js` + endpoint `/metrics` + alert nei log
+
+**Status:** [x] Completato (2026-02-09)
+
+---
+
+## FASE B — PREPARARE IL PRODOTTO (Priorità MEDIA-ALTA)
+
+### B1. Onboarding ristorante standardizzato
+**Obiettivo:** Processo ripetibile per aggiungere nuovi ristoranti.
+
+Creare `docs/ONBOARDING-RESTAURANT.md` con:
+
+**Dati richiesti dal ristorante:**
+- [ ] Nome, indirizzo, telefono
+- [ ] Orari apertura (pranzo/cena per ogni giorno)
+- [ ] Giorni chiusura
+- [ ] Capacità massima per fascia
+- [ ] Max persone per prenotazione
+- [ ] FAQ (parcheggio, allergeni, animali, ecc.)
+- [ ] Backend scelto (resOS / OctoTable / Sheets)
+- [ ] Credenziali API (se resOS/OctoTable)
+
+**Informazioni operative:**
+- [ ] Differenza Sheets vs gestionale professionale
+- [ ] Tempi setup realistici (30-60 min)
+- [ ] Checklist operativa per setup tecnico
+
+**Cose che il ristorante deve accettare (contratto implicito):**
+- [ ] Limiti dell'AI (non gestisce richieste complesse fuori scope)
+- [ ] Cosa succede in caso di errore (handover o messaggio)
+- [ ] Gestione "richiesta" vs "accettata" (resOS: status approved)
+- [ ] L'AI non può garantire 100% accuratezza
+- [ ] Ristorante deve tenere aggiornati orari/capacità
+
+**Output:** `docs/ONBOARDING-RESTAURANT.md`
+
+**Status:** [ ] Da fare (esiste bozza in `onboarding_ristorante.md`?)
+
+---
+
+### B2. Multi-tenant hardening
+**Obiettivo:** Nessun leak di dati tra ristoranti.
+
+Verificare:
+
+- [ ] Ogni chiamata API usa `restaurant_id` corretto
+- [ ] Nessun dato globale non namespaced
+- [ ] KB caricata per tenant, non condivisa
+- [ ] Fallback backend per-tenant corretto
+- [ ] Test: chiamata a modena01 non vede dati di roma
+
+**Output:** Checklist verificata
+
+**Status:** [ ] Da verificare
+
+---
+
+### B3. Pricing & pacchetti (bozza)
+**Obiettivo:** Definire architettura pricing (non marketing).
+
+Bozza:
+
+| Piano | Backend | Prezzo indicativo | Note |
+|-------|---------|-------------------|------|
+| Starter | Google Sheets/Calendar | €X/mese | Setup semplice |
+| Pro | resOS / OctoTable | €Y/mese | Gestionale professionale |
+| Enterprise | Pro + handover umano | €Z/mese | SLA garantito |
+
+Da definire:
+- [ ] Costi Vapi/Twilio per chiamata
+- [ ] Margine sostenibile
+- [ ] Limiti per piano (chiamate/mese?)
+
+**Output:** Bozza pricing
+
+**Status:** [ ] Da fare (decisione business)
+
+---
+
+### B4. GDPR / Privacy & data retention
+**Obiettivo:** Conformità EU obbligatoria prima di vendere. Telefono + nome = dati personali.
+
+Checklist:
+- [ ] Definire cosa si logga (telefono, nome, contenuto chiamata?)
+- [ ] Definire retention (quanto si conservano i dati: 30gg? 90gg?)
+- [ ] Procedura cancellazione dati su richiesta (diritto all'oblio)
+- [ ] Privacy policy per il sito web
+- [ ] Informativa per ristoratore (DPA - Data Processing Agreement base)
+- [ ] Nessun dato personale in log di debug in chiaro (mascherare telefono: +39XXX...567)
+
+**Output:** Policy definita, implementazione mascheramento log
+
+**Status:** [ ] Da fare
+
+---
+
+### B5. Security / Secrets & hardening deploy
+**Obiettivo:** Nessun segreto esposto, deploy sicuro.
+
+Checklist:
+- [ ] Nessun segreto in log/payload (API key, password)
+- [ ] Chiavi API in variabili ambiente, mai hardcoded
+- [ ] Piano rotazione chiavi (Google/resOS/Twilio)
+- [ ] Validazione firma webhook (se usati callback)
+- [ ] CORS configurato correttamente
+- [ ] Headers di sicurezza (helmet o equivalente)
+
+**Output:** Security review completata
+
+**Status:** [ ] Da verificare
+
+---
+
+### B6. Rate limiting & abuse protection
+**Obiettivo:** Protezione da abuso, specialmente con numero demo pubblico.
+
+Checklist:
+- [ ] Rate limit per tenant (max chiamate/minuto)
+- [ ] Rate limit per numero chiamante (anti-spam)
+- [ ] Soglia alert per uso anomalo
+- [ ] Blocco automatico se superata soglia
+
+**Output:** Rate limiter implementato
+
+**Status:** [ ] Da fare (prima di demo pubblica E2)
+
+---
+
+### B7. Staging environment
+**Obiettivo:** Non fare esperimenti su produzione.
+
+Checklist:
+- [ ] Tenant fittizio per test (es. `demo01`)
+- [ ] Config isolata (non tocca dati reali)
+- [ ] Env separati (dev / staging / prod)
+- [ ] Deploy su staging prima di prod
+
+**Output:** Ambiente staging configurato
+
+**Status:** [ ] Da fare (gestibile con 2 tenant, diventa critico con 5+)
+
+---
+
+### B8. Kill switch per ristorante
+**Obiettivo:** Poter spegnere rapidamente un tenant in produzione.
+
+Implementare:
+- [ ] Flag `enabled: true/false` in config ristorante (`ristoranti.json`)
+- [ ] Se `enabled: false`:
+  - Nessun tool booking chiamato
+  - Risposta educata: "Il servizio prenotazioni è temporaneamente sospeso"
+  - Eventuale handover se `is_open_now`
+- [ ] Possibilità di disabilitare da config senza deploy
+
+**Output:** Flag implementato, comportamento definito
+
+**Status:** [ ] Da fare
+
+---
+
+## FASE C — DOCUMENTAZIONE (Priorità MEDIA)
+
+### C1. README vendibile
+**Obiettivo:** Documento chiaro per te, partner, clienti.
+
+Contenuto:
+
+- [ ] Cosa fa il sistema (1 paragrafo)
+- [ ] Cosa NON fa (limiti dichiarati)
+- [ ] Flussi supportati (prenotazione, modifica, cancella, FAQ, orari, handover)
+- [ ] Backend supportati (resOS, OctoTable, Sheets)
+- [ ] Requisiti per il ristorante
+
+**Output:** `README.md` aggiornato o `docs/OVERVIEW.md`
+
+**Status:** [ ] Da fare
+
+---
+
+### C2. FAQ interne (supporto)
+**Obiettivo:** Risposte pronte per problemi comuni.
+
+Esempi:
+
+- [ ] "Il ristorante dice che è chiuso ma l'AI dice aperto" → verificare KB orari
+- [ ] "Non prende prenotazioni da 10 persone" → verificare `max_people` in KB
+- [ ] "Lo stato è 'richiesta' invece di 'accettata'" → verificare `status: approved` in resOS
+- [ ] "Booking_id non ritorna" → verificare fallback in `reservations-resos.js`
+- [ ] "Prenotazione duplicata" → spiegare check preventivo
+
+**Output:** `docs/FAQ-SUPPORTO.md`
+
+**Status:** [ ] Da fare
+
+---
+
+## FASE D — TEST VOCALI (Priorità: quando possibile)
+
+### D1. Script chiamate
+**Obiettivo:** Test strutturati, zero improvvisazione.
+
+**Status:** ✅ GIÀ FATTO → `docs/Test_Attivazione/test_vapi_chiamate.md`
+
+Contiene:
+- Prenotazione (A1-A4)
+- Casi particolari (B1-B6)
+- Lista/Modifica/Cancella (C, D, E)
+- FAQ (F1-F4)
+- Orari (G1-G3)
+- Edge cases (H1-H4)
+- **Handover (J1-J3)** ← aggiunto oggi
+- **Telefono (K1-K3)** ← aggiunto oggi
+- **Goodbye/Conferma (L1-L3)** ← aggiunto oggi
+- **Provider error (M1-M3)** ← aggiunto oggi
+- Roma subset (I1-I2)
+
+---
+
+### D2. Eseguire test Vapi
+**Obiettivo:** Verificare comportamento reale.
+
+- [ ] Test modena01 (tutti A-M)
+- [ ] Test roma (subset I + selezione)
+- [ ] Annotare esiti in `test_vapi_chiamate.md`
+- [ ] Fix bug emersi
+- [ ] Re-test se necessario
+
+**Status:** [ ] In attesa (ambiente non disponibile)
+
+---
+
+## FASE E — GO-TO-MARKET (Priorità: dopo test)
+
+### E1. Sito web / Landing page
+**Obiettivo:** Lead generation.
+
+- [ ] Struttura pagina (hero, come funziona, benefici, demo, CTA)
+- [ ] Copy
+- [ ] Design
+- [ ] Deploy
+
+**Status:** [ ] Da fare in chat separata (contesto: `docs/SITO-CONTEXT.md`)
+
+---
+
+### E2. Demo pubblica
+**Obiettivo:** Prospect possono provare l'assistente.
+
+- [ ] Numero Vapi dedicato per demo
+- [ ] Ristorante fittizio o modena01 (se ok col cliente)
+- [ ] Istruzioni sul sito
+
+**Status:** [ ] Da fare
+
+---
+
+### E3. Primo cliente reale
+**Obiettivo:** Validazione in produzione.
+
+- [ ] Identificare ristorante (modena01? altro?)
+- [ ] Setup completo
+- [ ] Monitoraggio chiamate
+- [ ] Feedback e iterazione
+
+**Status:** [ ] Da fare
+
+---
+
+## COSA NON FARE ORA
+
+- ❌ Non toccare backend "per provare" senza motivo
+- ❌ Non aggiungere feature nuove
+- ❌ Non cambiare schema tool
+- ❌ Non "ottimizzare UX" senza dati reali
+
+---
+
+## RIEPILOGO PRIORITÀ
+
+| Fase | Task | Priorità | Dipende da | Status |
+|------|------|----------|------------|--------|
+| A1 | Prompt hardening | 🔴 ALTA | - | [ ] |
+| A2 | Tools contract | 🔴 ALTA | - | [ ] |
+| A3 | Logging | 🔴 ALTA | - | [ ] |
+| A4 | Error taxonomy | 🔴 ALTA | - | [ ] |
+| A5 | Idempotenza | 🔴 ALTA | - | ✅ resOS, [ ] Sheets |
+| A6 | Provider health | 🔴 ALTA | - | [ ] |
+| A7 | Prompt versioning | 🟠 MEDIA | - | [ ] |
+| A8 | Regression tests API | 🔴 ALTA | A2, A4 | [ ] |
+| A9 | Monitoring & alerting | 🟠 MEDIA | A3 | [ ] |
+| B1 | Onboarding doc | 🟠 MEDIA-ALTA | - | [ ] |
+| B2 | Multi-tenant check | 🟠 MEDIA-ALTA | - | [ ] |
+| B3 | Pricing | 🟡 MEDIA | - | [ ] |
+| B4 | GDPR / Privacy | 🟠 MEDIA-ALTA | - | [ ] |
+| B5 | Security / Secrets | 🟠 MEDIA-ALTA | - | [ ] |
+| B6 | Rate limiting | 🟠 MEDIA | - | [ ] |
+| B7 | Staging environment | 🟡 MEDIA | - | [ ] |
+| B8 | Kill switch | 🟠 MEDIA-ALTA | - | [ ] |
+| C1 | README | 🟡 MEDIA | - | [ ] |
+| C2 | FAQ supporto | 🟡 MEDIA | - | [ ] |
+| D1 | Script test | - | - | ✅ FATTO |
+| D2 | Test Vapi | 🔴 ALTA | A1-A6 | [ ] In attesa |
+| E1 | Sito web | 🟡 MEDIA | - | [ ] |
+| E2 | Demo pubblica | 🟡 MEDIA | D2, B6 | [ ] |
+| E3 | Primo cliente | 🔴 ALTA | D2, B4, B5 | [ ] |
+
+**Legenda:** 🔴 Bloccante per test/lancio | 🟠 Importante pre-lancio | 🟡 Può aspettare
+
+---
+
+## ORDINE DI ESECUZIONE CONSIGLIATO
+
+**STEP 1 — Prima dei test Vapi (obbligatorio):**
+1. A1 - Prompt hardening
+2. A4 - Error taxonomy
+3. A2 - Tools contract
+4. A3 - Logging
+5. A5 - Idempotenza (verificare Sheets)
+6. A6 - Provider health
+7. A8 - Regression tests API
+
+**STEP 2 — Parallelamente (non bloccante per test, ma per lancio):**
+- A7 - Prompt versioning
+- A9 - Monitoring & alerting
+- B1 - Onboarding doc
+- B2 - Multi-tenant check
+- B5 - Security / Secrets
+- B8 - Kill switch
+- C1/C2 - Documentazione
+
+**STEP 3 — Test Vapi:**
+- D2 - Eseguire test vocali (richiede STEP 1 completato)
+
+**STEP 4 — Prima di vendere (obbligatorio):**
+- B4 - GDPR / Privacy
+- B5 - Security review finale
+- B6 - Rate limiting (prima di demo pubblica)
+
+**STEP 5 — Go-to-market:**
+- E1 - Sito web
+- E2 - Demo pubblica
+- E3 - Primo cliente
+
+---
+
+*Ultimo aggiornamento: 2026-02-03*

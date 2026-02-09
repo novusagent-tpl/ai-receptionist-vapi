@@ -5,7 +5,8 @@
   "main": "src/server-vapi.js",
   "scripts": {
     "start": "node src/server-vapi.js",
-    "dev": "nodemon src/server-vapi.js"
+    "dev": "nodemon src/server-vapi.js",
+    "test": "node scripts/regression-tests.js"
   },
   "keywords": [],
   "author": "",

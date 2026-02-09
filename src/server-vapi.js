@@ -15,10 +15,99 @@ const resolveRelativeTime = require('./api/resolve_relative_time');
 const isOpenNow = require('./api/is_open_now');
 
 
+const logger = require('./logger');
+const metrics = require('./metrics');
+const reservations = require('./reservations');
+const { getReservationsBackend } = reservations;
+
 const app = express();
 
 // Middleware base
 app.use(bodyParser.json());
+
+// Middleware: request_id + Vapi call info + backend_used
+app.use((req, res, next) => {
+  // Genera request_id univoco per ogni richiesta
+  req.requestId = logger.generateRequestId();
+
+  // Estrai call_id e conversation_id dal payload Vapi (se presente)
+  const vapiInfo = logger.extractVapiCallInfo(req.body);
+  req.callId = vapiInfo.call_id || null;
+  req.conversationId = vapiInfo.conversation_id || null;
+
+  // Determina backend usato (se restaurant_id presente)
+  const body = req.body || {};
+  const msg = body.message;
+  let restaurantId = body.restaurant_id || null;
+  if (msg && msg.type === 'tool-calls') {
+    const tc =
+      (Array.isArray(msg.toolCalls) && msg.toolCalls[0]) ||
+      (Array.isArray(msg.toolCallList) && msg.toolCallList[0]) ||
+      null;
+    if (tc && tc.function && tc.function.arguments) {
+      restaurantId = tc.function.arguments.restaurant_id || restaurantId;
+    }
+  }
+  req.restaurantId = restaurantId;
+
+  try {
+    req.backendUsed = restaurantId ? getReservationsBackend(restaurantId) : null;
+  } catch {
+    req.backendUsed = null;
+  }
+
+  // Prompt version dal config ristorante
+  try {
+    const { getRestaurantConfig } = require('./config/restaurants');
+    const cfg = restaurantId ? getRestaurantConfig(restaurantId) : null;
+    req.promptVersion = cfg ? (cfg.prompt_version || null) : null;
+  } catch {
+    req.promptVersion = null;
+  }
+
+  // Log ogni richiesta API (solo /api/)
+  if (req.path.startsWith('/api/')) {
+    logger.info('api_request', {
+      request_id: req.requestId,
+      method: req.method,
+      path: req.path,
+      restaurant_id: req.restaurantId,
+      backend_used: req.backendUsed,
+      prompt_version: req.promptVersion,
+      call_id: req.callId,
+      conversation_id: req.conversationId,
+    });
+  }
+
+  // Tracking metriche: misura durata e registra al termine della response
+  if (req.path.startsWith('/api/')) {
+    const startTime = Date.now();
+    const origJson = res.json.bind(res);
+
+    res.json = function (body) {
+      const durationMs = Date.now() - startTime;
+      const toolPath = req.path.replace('/api/', '');
+      const isError = body && (body.ok === false || body.error_code);
+      const errorCode = (body && body.error_code) || null;
+      const isBookingAttempt = toolPath === 'create_booking';
+      const isBookingSuccess = isBookingAttempt && body && body.ok === true;
+
+      metrics.recordRequest({
+        restaurantId: req.restaurantId,
+        toolPath,
+        durationMs,
+        isError,
+        errorCode,
+        isBookingAttempt,
+        isBookingSuccess,
+      });
+
+      return origJson(body);
+    };
+  }
+
+  next();
+});
 
 // Porta
 const PORT = process.env.PORT || 3000;
@@ -29,6 +118,11 @@ app.get('/status', (req, res) => {
     ok: true,
     env: process.env.NODE_ENV || 'dev'
   });
+});
+
+// Metrics endpoint — monitoring dashboard
+app.get('/metrics', (req, res) => {
+  return res.json(metrics.getSnapshot());
 });
 
 // Debug openings
@@ -65,8 +159,6 @@ app.get('/debug/openings', (req, res) => {
     });
   }
 });
-
-const reservations = require('./reservations');
 
 // DEBUG: create booking
 app.get('/debug/create_booking', async (req, res) => {

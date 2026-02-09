@@ -14,6 +14,25 @@ const { getRestaurantConfig } = require('./config/restaurants');
 
 require('dotenv').config();
 
+/**
+ * Verifica se un errore è un timeout o errore di rete (Google APIs).
+ * Google APIs: ETIMEDOUT, ECONNREFUSED, ENOTFOUND, socket hang up, timeout.
+ */
+function isNetworkError(err) {
+  if (!err) return false;
+  const msg = String(err.message || '').toLowerCase();
+  const code = String(err.code || '').toLowerCase();
+  return (
+    code === 'etimedout' ||
+    code === 'econnrefused' ||
+    code === 'enotfound' ||
+    code === 'econnreset' ||
+    msg.includes('timeout') ||
+    msg.includes('socket hang up') ||
+    msg.includes('network')
+  );
+}
+
 function normalizePhone(p) {
   if (!p) return "";
   const digits = String(p).replace(/\D/g, "");
@@ -51,6 +70,29 @@ async function createReservation({
 
     const sheetId = restCfg.sheet_id;
     const calendarId = restCfg.calendar_id;
+
+    // Controllo preventivo: evita duplicati (stesso telefono, giorno, orario)
+    const existing = await listReservationsByPhone(restaurantId, phone);
+    if (existing.ok && Array.isArray(existing.results)) {
+      const timeStr = String(time || '').slice(0, 5);
+      const duplicate = existing.results.find(
+        b => b.day === day && (b.time || '').slice(0, 5) === timeStr
+      );
+      if (duplicate) {
+        logger.warn('sheets_duplicate_booking_blocked', {
+          restaurant_id: restaurantId,
+          day,
+          time: timeStr,
+          phone,
+          existing_booking_id: duplicate.booking_id,
+        });
+        return {
+          ok: false,
+          error_code: 'DUPLICATE_BOOKING',
+          error_message: `Esiste già una prenotazione per ${day} alle ${timeStr} con questo numero.`,
+        };
+      }
+    }
 
     const bookingId = uuidv4();
     const createdAt = new Date().toISOString();
@@ -117,8 +159,10 @@ async function createReservation({
     };
 
   } catch (err) {
-    console.error("Errore createReservation:", err.message);
-
+    logger.error('sheets_create_error', { restaurant_id: restaurantId, message: err.message });
+    if (isNetworkError(err)) {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: "CREATE_ERROR",
@@ -169,8 +213,10 @@ async function listReservationsByPhone(restaurantId, phone) {
     };
 
   } catch (err) {
-    console.error("Errore listReservationsByPhone:", err.message);
-
+    logger.error('sheets_list_phone_error', { restaurant_id: restaurantId, message: err.message });
+    if (isNetworkError(err)) {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: "LIST_ERROR",
@@ -204,6 +250,10 @@ async function listReservationsByDay(restaurantId, dayISO) {
 
     return { ok: true, results };
   } catch (err) {
+    logger.error('sheets_list_day_error', { restaurant_id: restaurantId, message: err.message });
+    if (isNetworkError(err)) {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: 'LIST_BY_DAY_ERROR',
@@ -284,20 +334,23 @@ async function updateReservation(restaurantId, bookingId, fields) {
       }
     });
 
+    const peopleNum = updated.people != null && updated.people !== '' ? Number(updated.people) : null;
     return {
       ok: true,
       booking_id: updated.booking_id,
       day: updated.day,
       time: updated.time,
-      people: updated.people,
+      people: Number.isFinite(peopleNum) ? peopleNum : null,
       name: updated.name,
       phone: updated.phone,
       notes: updated.notes
     };
 
   } catch (err) {
-    console.error("Errore updateReservation:", err.message);
-
+    logger.error('sheets_update_error', { restaurant_id: restaurantId, message: err.message });
+    if (isNetworkError(err)) {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: "UPDATE_ERROR",
@@ -388,8 +441,10 @@ async function deleteReservation(restaurantId, bookingId) {
     };
 
   } catch (err) {
-    console.error("Errore deleteReservation:", err.message);
-
+    logger.error('sheets_delete_error', { restaurant_id: restaurantId, message: err.message });
+    if (isNetworkError(err)) {
+      return { ok: false, error_code: 'PROVIDER_UNAVAILABLE', error_message: 'Il sistema di prenotazione non è raggiungibile in questo momento.' };
+    }
     return {
       ok: false,
       error_code: "DELETE_ERROR",
