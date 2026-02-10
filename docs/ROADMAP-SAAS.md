@@ -253,26 +253,31 @@ Creare `docs/ONBOARDING-RESTAURANT.md` con:
 - [ ] L'AI non può garantire 100% accuratezza
 - [ ] Ristorante deve tenere aggiornati orari/capacità
 
-**Output:** `docs/ONBOARDING-RESTAURANT.md`
+**Output:** `onboarding/ONBOARDING-RESTAURANT.md` + `onboarding/CHECKLIST.md`
 
-**Status:** [ ] Da fare (esiste bozza in `onboarding_ristorante.md`?)
+**Status:** [x] Completato (2026-02-09) — guida completa con supporto resOS/OctoTable/Sheets, Knowledge Base Vapi, prompt versioning, regression test, tempi stimati, cosa dire al ristorante.
 
 ---
 
 ### B2. Multi-tenant hardening
 **Obiettivo:** Nessun leak di dati tra ristoranti.
 
-Verificare:
+Verifica completata:
 
-- [ ] Ogni chiamata API usa `restaurant_id` corretto
-- [ ] Nessun dato globale non namespaced
-- [ ] KB caricata per tenant, non condivisa
-- [ ] Fallback backend per-tenant corretto
-- [ ] Test: chiamata a modena01 non vede dati di roma
+- [x] Ogni chiamata API usa `restaurant_id` dal request, nessun ID hardcoded
+- [x] KB caricata per tenant (`kb/<restaurant_id>.json`), non condivisa
+- [x] Config per tenant (`ristoranti.json` → entry separate)
+- [x] Dispatcher seleziona backend corretto per ogni restaurant_id
+- [x] Sheets: `sheet_id` e `calendar_id` diversi per ristorante
+- [x] resOS: filtra per `resos_restaurant_id` specifico
+- [x] Metriche e log separati per restaurant_id
+- [x] Test cross-tenant aggiunto in regression tests (modena01 vs roma vs ID fake)
 
-**Output:** Checklist verificata
+**Credenziali per-tenant (risolto):** resOS e OctoTable ora supportano API key/credentials per-ristorante. In `ristoranti.json` si specifica il nome della variabile `.env` (es. `"resos_api_key_env": "RESOS_API_KEY_MODENA01"`), e in `.env` si mette la chiave reale. Fallback automatico alla chiave globale se non configurato.
 
-**Status:** [ ] Da verificare
+**Output:** Codice verificato + test cross-tenant in `regression-tests.js`
+
+**Status:** [x] Completato (2026-02-09)
 
 ---
 
@@ -292,9 +297,9 @@ Da definire:
 - [ ] Margine sostenibile
 - [ ] Limiti per piano (chiamate/mese?)
 
-**Output:** Bozza pricing
+**Output:** `docs/PRICING.md` — struttura completa con costi operativi, 3 piani (Base/Pro/Custom), 3 modelli pricing (fisso/fisso+variabile/pay-per-use), calcolo margine, checklist decisioni pre-lancio.
 
-**Status:** [ ] Da fare (decisione business)
+**Status:** [x] Struttura completata (2026-02-09) — prezzi finali da decidere dopo test reali e analisi costi Vapi/Twilio
 
 ---
 
@@ -302,16 +307,23 @@ Da definire:
 **Obiettivo:** Conformità EU obbligatoria prima di vendere. Telefono + nome = dati personali.
 
 Checklist:
-- [ ] Definire cosa si logga (telefono, nome, contenuto chiamata?)
-- [ ] Definire retention (quanto si conservano i dati: 30gg? 90gg?)
-- [ ] Procedura cancellazione dati su richiesta (diritto all'oblio)
-- [ ] Privacy policy per il sito web
-- [ ] Informativa per ristoratore (DPA - Data Processing Agreement base)
-- [ ] Nessun dato personale in log di debug in chiaro (mascherare telefono: +39XXX...567)
+- [x] Definire cosa si logga (telefono, nome, contenuto chiamata?) → definito in `docs/GDPR-PRIVACY.md`
+- [x] Definire retention (quanto si conservano i dati: 30gg? 90gg?) → tabella retention in GDPR-PRIVACY.md
+- [x] Procedura cancellazione dati su richiesta (diritto all'oblio) → procedura documentata
+- [ ] Privacy policy per il sito web → da fare prima del lancio
+- [ ] Informativa per ristoratore (DPA - Data Processing Agreement base) → da fare prima del lancio
+- [x] Nessun dato personale in log di debug in chiaro (mascherare telefono: +39XXX...567) → implementato in `src/logger.js`
+
+**Implementazione tecnica:**
+- `src/logger.js`: aggiunta funzione `maskPhone()` (+39XXX...567) e `maskName()` (M***) con auto-sanitize
+- Tutte le API usano il logger strutturato (zero `console.log` diretti con dati personali)
+- Documento completo: `docs/GDPR-PRIVACY.md` (dati trattati, ruoli GDPR, retention, diritti utente)
+
+**TODO pre-lancio:** Privacy policy sito web + DPA base per ristoratori + verificare retention Vapi/Twilio
 
 **Output:** Policy definita, implementazione mascheramento log
 
-**Status:** [ ] Da fare
+**Status:** [x] Completato (parte tecnica) — Privacy policy e DPA da completare prima del lancio
 
 ---
 
@@ -319,16 +331,22 @@ Checklist:
 **Obiettivo:** Nessun segreto esposto, deploy sicuro.
 
 Checklist:
-- [ ] Nessun segreto in log/payload (API key, password)
-- [ ] Chiavi API in variabili ambiente, mai hardcoded
-- [ ] Piano rotazione chiavi (Google/resOS/Twilio)
-- [ ] Validazione firma webhook (se usati callback)
-- [ ] CORS configurato correttamente
-- [ ] Headers di sicurezza (helmet o equivalente)
+- [x] Nessun segreto in log/payload (API key, password) → verificato: logger maschera dati, nessuna chiave nei log
+- [x] Chiavi API in variabili ambiente, mai hardcoded → fatto in B2 (per-tenant env vars)
+- [x] Piano rotazione chiavi (Google/resOS/Twilio) → documentato in `docs/GDPR-PRIVACY.md` sez. 8
+- [x] CORS configurato correttamente → aggiunto `cors` con origini configurabili via `CORS_ALLOWED_ORIGINS`
+- [x] Headers di sicurezza (helmet o equivalente) → aggiunto `helmet` (X-Frame-Options, CSP, HSTS, ecc.)
+- [x] Endpoint `/debug/*` bloccati in produzione → restituiscono 404 quando `NODE_ENV=production`
+- [x] `.env` in `.gitignore` → confermato
+
+**Implementazione:**
+- `src/server-vapi.js`: aggiunto `helmet()`, `cors()`, blocco `/debug` in produzione
+- `docs/GDPR-PRIVACY.md`: aggiunta sezione rotazione chiavi con procedura e frequenze
+- Pacchetti: `helmet`, `cors` installati
 
 **Output:** Security review completata
 
-**Status:** [ ] Da verificare
+**Status:** [x] Completato
 
 ---
 
@@ -336,14 +354,23 @@ Checklist:
 **Obiettivo:** Protezione da abuso, specialmente con numero demo pubblico.
 
 Checklist:
-- [ ] Rate limit per tenant (max chiamate/minuto)
-- [ ] Rate limit per numero chiamante (anti-spam)
-- [ ] Soglia alert per uso anomalo
-- [ ] Blocco automatico se superata soglia
+- [x] Rate limit per tenant (max chiamate/minuto) → default 60 req/min per restaurant_id
+- [x] Rate limit per numero chiamante (anti-spam) → default 30 req/min per IP
+- [x] Soglia alert per uso anomalo → log warning quando limite superato
+- [x] Blocco automatico se superata soglia → risposta 429 "Troppe richieste"
+
+**Implementazione:**
+- `src/rate-limiter.js`: modulo in-memory con 2 livelli (tenant + caller IP)
+- Configurabile via env vars: `RATE_LIMIT_PER_TENANT`, `RATE_LIMIT_PER_CALLER`, `RATE_LIMIT_WINDOW_MS`
+- Risposta 429 con messaggio chiaro se superato il limite
+- Snapshot visibile in `/metrics` (sezione `rate_limiting`)
+- Pulizia automatica bucket scaduti ogni 5 minuti
+
+**Default:** 60 req/min per ristorante, 30 req/min per IP, finestra 1 minuto
 
 **Output:** Rate limiter implementato
 
-**Status:** [ ] Da fare (prima di demo pubblica E2)
+**Status:** [x] Completato
 
 ---
 
@@ -351,14 +378,19 @@ Checklist:
 **Obiettivo:** Non fare esperimenti su produzione.
 
 Checklist:
-- [ ] Tenant fittizio per test (es. `demo01`)
-- [ ] Config isolata (non tocca dati reali)
-- [ ] Env separati (dev / staging / prod)
-- [ ] Deploy su staging prima di prod
+- [x] Tenant fittizio per test (es. `demo01`) → creato in `ristoranti.json` + `kb/demo01.json`
+- [x] Config isolata (non tocca dati reali) → backend sheets senza sheet_id reale
+- [x] Env separati (dev / staging / prod) → documentati in `docs/STAGING-GUIDE.md`
+- [x] Deploy su staging prima di prod → guida per secondo servizio Render (opzionale)
 
-**Output:** Ambiente staging configurato
+**Implementazione:**
+- `demo01` in `ristoranti.json`: tenant fittizio con KB di esempio
+- `kb/demo01.json`: orari, FAQ di test
+- `docs/STAGING-GUIDE.md`: guida completa ai 3 ambienti + come usare demo01
 
-**Status:** [ ] Da fare (gestibile con 2 tenant, diventa critico con 5+)
+**Output:** Ambiente staging configurato, posso fare test senza toccare gli altri ristoranti che sono attivi
+
+**Status:** [x] Completato
 
 ---
 
@@ -366,16 +398,26 @@ Checklist:
 **Obiettivo:** Poter spegnere rapidamente un tenant in produzione.
 
 Implementare:
-- [ ] Flag `enabled: true/false` in config ristorante (`ristoranti.json`)
-- [ ] Se `enabled: false`:
-  - Nessun tool booking chiamato
+- [x] Flag `enabled: true/false` in config ristorante (`ristoranti.json`) → aggiunto a tutti i tenant
+- [x] Se `enabled: false`:
+  - Nessun tool chiamato → middleware blocca tutte le `/api/` per quel restaurant_id
   - Risposta educata: "Il servizio prenotazioni è temporaneamente sospeso"
-  - Eventuale handover se `is_open_now`
-- [ ] Possibilità di disabilitare da config senza deploy
+  - Log warning `restaurant_disabled` per monitoraggio
+- [x] Possibilità di disabilitare da config senza deploy → cambiare `enabled` in `ristoranti.json` + push
+
+**Implementazione:**
+- `ristoranti.json`: campo `enabled: true/false` per ogni tenant (default true se assente)
+- `src/config/restaurants.js`: funzione `isRestaurantEnabled()`
+- `src/server-vapi.js`: middleware kill switch che blocca le API se `enabled: false`
+
+**Come spegnere un ristorante:**
+1. In `ristoranti.json` cambia `"enabled": true` → `"enabled": false`
+2. Push su GitHub → Render si aggiorna
+3. Il ristorante riceve "servizio temporaneamente sospeso" per ogni chiamata
 
 **Output:** Flag implementato, comportamento definito
 
-**Status:** [ ] Da fare
+**Status:** [x] Completato
 
 ---
 

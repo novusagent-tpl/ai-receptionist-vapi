@@ -1,0 +1,67 @@
+{
+  "id": "octodemo",
+  "name": "Trattoria OctoDemo",
+  "timezone": "Europe/Rome",
+  "address": "Via Roma 42, Milano",
+  "phone": "+390212345678",
+  "max_people": 4,
+  "booking_cutoff_minutes": 30,
+
+  "max_concurrent_bookings": 3,
+  "avg_stay_minutes": 60,
+
+  "openings": {
+    "monday":    { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "tuesday":   { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "wednesday": { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "thursday":  { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "friday":    { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "saturday":  { "closed": false, "lunch": ["12:00", "15:00"], "dinner": ["19:00", "23:00"] },
+    "sunday":    { "closed": true,  "lunch": null,               "dinner": null },
+
+    "overrides": {}
+  },
+
+  "faq": [
+    {
+      "q": "Accettate animali domestici?",
+      "a": "Sì, i cani di piccola taglia sono benvenuti nella nostra sala interna.",
+      "keywords": ["animali", "cani", "gatti", "pet"]
+    },
+    {
+      "q": "Avete opzioni vegetariane?",
+      "a": "Sì, abbiamo diversi piatti vegetariani nel nostro menù. Il nostro chef propone anche piatti vegani su richiesta.",
+      "keywords": ["vegetariano", "vegano", "verdure"]
+    },
+    {
+      "q": "Avete opzioni senza glutine?",
+      "a": "Sì, abbiamo opzioni senza glutine. Avvisateci al momento della prenotazione così possiamo prepararci al meglio.",
+      "keywords": ["glutine", "celiachia", "celiaco"]
+    },
+    {
+      "q": "Avete parcheggio?",
+      "a": "Sì, abbiamo un piccolo parcheggio privato gratuito per i nostri clienti. In alternativa, c'è un parcheggio pubblico a 100 metri.",
+      "keywords": ["parcheggio", "macchina", "auto"]
+    },
+    {
+      "q": "Accettate carte di credito?",
+      "a": "Sì, accettiamo tutte le principali carte di credito, bancomat e anche pagamenti contactless.",
+      "keywords": ["carta", "credito", "bancomat", "pagamento", "contanti"]
+    },
+    {
+      "q": "Si può pagare in contanti?",
+      "a": "Sì, accettiamo anche pagamenti in contanti.",
+      "keywords": ["contanti", "cash"]
+    },
+    {
+      "q": "Fate servizio da asporto?",
+      "a": "Sì, offriamo sia asporto che consegna a domicilio nella zona di Milano centro.",
+      "keywords": ["asporto", "domicilio", "delivery", "takeaway"]
+    },
+    {
+      "q": "Avete menù per bambini?",
+      "a": "Sì, abbiamo un menù dedicato ai bambini con porzioni ridotte e prezzi speciali.",
+      "keywords": ["bambini", "bambino", "kids", "menù bambini"]
+    }
+  ]
+}

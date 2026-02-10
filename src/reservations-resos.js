@@ -2,7 +2,11 @@
  * Adapter resOS per prenotazioni.
  * API resOS v1: Basic Auth (API key), base URL https://api.resos.com/v1, endpoint /bookings.
  *
- * Richiede: RESOS_API_KEY (e opz. RESOS_BASE_URL, RESOS_DEFAULT_DURATION_MINUTES).
+ * Credenziali per-tenant: ogni ristorante può avere la sua API key.
+ * In ristoranti.json: "resos_api_key_env": "RESOS_API_KEY_MODENA01"
+ * In .env: RESOS_API_KEY_MODENA01=chiave_reale
+ * Fallback: se resos_api_key_env non è configurato, usa RESOS_API_KEY globale.
+ *
  * Config ristorante: resos_restaurant_id (restaurantId resOS, es. "JLAs2CviunNCSEfbt").
  *
  * Mapping:
@@ -21,7 +25,7 @@ const { DateTime } = require('luxon');
 require('dotenv').config();
 
 const BASE_URL = (process.env.RESOS_BASE_URL || 'https://api.resos.com/v1').replace(/\/$/, '');
-const API_KEY = (process.env.RESOS_API_KEY || '').trim();
+const GLOBAL_API_KEY = (process.env.RESOS_API_KEY || '').trim();
 const ENV_DEFAULT_DURATION = Math.max(1, parseInt(process.env.RESOS_DEFAULT_DURATION_MINUTES || '120', 10));
 
 /** Durata prenotazione in minuti: prima KB (avg_stay_minutes), poi .env RESOS_DEFAULT_DURATION_MINUTES. */
@@ -50,21 +54,39 @@ function getResOSRestaurantId(restaurantId) {
   }
 }
 
-function getAuthHeader() {
-  if (!API_KEY) return {};
-  const encoded = Buffer.from(API_KEY + ':', 'utf8').toString('base64');
+/**
+ * Restituisce l'API key resOS per un ristorante specifico.
+ * Priorità: config.resos_api_key_env → variabile .env con quel nome → fallback RESOS_API_KEY globale.
+ */
+function getApiKey(restaurantId) {
+  try {
+    const cfg = getRestaurantConfig(restaurantId);
+    const envVarName = cfg.resos_api_key_env;
+    if (envVarName && process.env[envVarName]) {
+      return process.env[envVarName].trim();
+    }
+  } catch {
+    // ignore — usa fallback globale
+  }
+  return GLOBAL_API_KEY;
+}
+
+function getAuthHeader(restaurantId) {
+  const apiKey = getApiKey(restaurantId);
+  if (!apiKey) return {};
+  const encoded = Buffer.from(apiKey + ':', 'utf8').toString('base64');
   return { Authorization: `Basic ${encoded}` };
 }
 
 const API_TIMEOUT_MS = 15000; // 15 secondi timeout per chiamate resOS
 
-async function api(method, path, body = null, query = {}) {
+async function api(method, path, body = null, query = {}, restaurantId = null) {
   const qs = new URLSearchParams(query).toString();
   const url = path.startsWith('http') ? path : `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}${qs ? `?${qs}` : ''}`;
   const opts = {
     method,
     headers: {
-      ...getAuthHeader(),
+      ...getAuthHeader(restaurantId),
       'Content-Type': 'application/json'
     },
     signal: AbortSignal.timeout(API_TIMEOUT_MS)
@@ -156,11 +178,11 @@ async function createReservation({
   phone,
   notes
 }) {
-  if (!API_KEY) {
+  if (!getApiKey(restaurantId)) {
     return {
       ok: false,
       error_code: 'RESOS_NOT_CONFIGURED',
-      error_message: 'RESOS_API_KEY non configurato.'
+      error_message: 'RESOS_API_KEY non configurato per questo ristorante.'
     };
   }
   try {
@@ -196,7 +218,7 @@ async function createReservation({
       }
     }
 
-    const data = await api('POST', '/bookings', body);
+    const data = await api('POST', '/bookings', body, {}, restaurantId);
     let id = extractBookingId(data);
 
     // Fallback: solo se resOS non restituisce l'id nella risposta POST.
@@ -299,11 +321,11 @@ async function createReservation({
  * resOS non filtra per phone: list per range (oggi → +60gg) + filtro locale su guest.phone e restaurantId.
  */
 async function listReservationsByPhone(restaurantId, phone) {
-  if (!API_KEY) {
+  if (!getApiKey(restaurantId)) {
     return {
       ok: false,
       error_code: 'RESOS_NOT_CONFIGURED',
-      error_message: 'RESOS_API_KEY non configurato.'
+      error_message: 'RESOS_API_KEY non configurato per questo ristorante.'
     };
   }
   try {
@@ -316,7 +338,7 @@ async function listReservationsByPhone(restaurantId, phone) {
     const fromDateTime = today.toISO();
     const toDateTime = end.toISO();
 
-    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime });
+    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime }, restaurantId);
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
     const now = DateTime.now().setZone(tz);
@@ -360,11 +382,11 @@ async function listReservationsByPhone(restaurantId, phone) {
  * Lista prenotazioni per giorno. GET /bookings?fromDateTime&toDateTime + filtro restaurantId e data.
  */
 async function listReservationsByDay(restaurantId, dayISO) {
-  if (!API_KEY) {
+  if (!getApiKey(restaurantId)) {
     return {
       ok: false,
       error_code: 'RESOS_NOT_CONFIGURED',
-      error_message: 'RESOS_API_KEY non configurato.'
+      error_message: 'RESOS_API_KEY non configurato per questo ristorante.'
     };
   }
   try {
@@ -377,7 +399,7 @@ async function listReservationsByDay(restaurantId, dayISO) {
     const fromDateTime = start.toISO();
     const toDateTime = end.toISO();
 
-    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime });
+    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime }, restaurantId);
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
     const results = list
@@ -408,11 +430,11 @@ async function listReservationsByDay(restaurantId, dayISO) {
  * Modifica una prenotazione. PUT /bookings/{id} con campi people / date / time (PATCH non supportato).
  */
 async function updateReservation(restaurantId, bookingId, fields) {
-  if (!API_KEY) {
+  if (!getApiKey(restaurantId)) {
     return {
       ok: false,
       error_code: 'RESOS_NOT_CONFIGURED',
-      error_message: 'RESOS_API_KEY non configurato.'
+      error_message: 'RESOS_API_KEY non configurato per questo ristorante.'
     };
   }
   try {
@@ -429,7 +451,7 @@ async function updateReservation(restaurantId, bookingId, fields) {
       };
     }
 
-    await api('PUT', `/bookings/${bookingId}`, body);
+    await api('PUT', `/bookings/${bookingId}`, body, {}, restaurantId);
 
     logger.info('resos_update_reservation', { restaurant_id: restaurantId, booking_id: bookingId });
 
@@ -467,15 +489,15 @@ async function updateReservation(restaurantId, bookingId, fields) {
  * Cancella una prenotazione. DELETE non supportato: PUT /bookings/{id} con { status: "canceled" }.
  */
 async function deleteReservation(restaurantId, bookingId) {
-  if (!API_KEY) {
+  if (!getApiKey(restaurantId)) {
     return {
       ok: false,
       error_code: 'RESOS_NOT_CONFIGURED',
-      error_message: 'RESOS_API_KEY non configurato.'
+      error_message: 'RESOS_API_KEY non configurato per questo ristorante.'
     };
   }
   try {
-    await api('PUT', `/bookings/${bookingId}`, { status: 'canceled' });
+    await api('PUT', `/bookings/${bookingId}`, { status: 'canceled' }, {}, restaurantId);
 
     logger.info('resos_delete_reservation', { restaurant_id: restaurantId, booking_id: bookingId });
 

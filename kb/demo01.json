@@ -1,0 +1,38 @@
+{
+  "id": "demo01",
+  "name": "Ristorante Demo (test)",
+  "timezone": "Europe/Rome",
+  "address": "Via Demo 1, Test City",
+  "phone": "+390000000000",
+  "max_people": 6,
+  "booking_cutoff_minutes": 30,
+  "max_concurrent_bookings": 5,
+  "avg_stay_minutes": 60,
+
+  "openings": {
+    "monday":    { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "22:30"] },
+    "tuesday":   { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "22:30"] },
+    "wednesday": { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "22:30"] },
+    "thursday":  { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "22:30"] },
+    "friday":    { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "23:00"] },
+    "saturday":  { "closed": false, "lunch": ["12:00", "14:30"], "dinner": ["19:00", "23:00"] },
+    "sunday":    { "closed": true,  "lunch": null,               "dinner": null },
+
+    "overrides": {}
+  },
+
+  "faq": [
+    {
+      "q": "Accettate animali?",
+      "a": "Sì, i cani di piccola taglia sono benvenuti."
+    },
+    {
+      "q": "C'è il parcheggio?",
+      "a": "Sì, parcheggio gratuito davanti al ristorante."
+    },
+    {
+      "q": "Fate piatti senza glutine?",
+      "a": "Sì, abbiamo un menu dedicato per celiaci."
+    }
+  ]
+}

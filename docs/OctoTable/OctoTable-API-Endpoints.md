@@ -1,12 +1,12 @@
-# OctoTable API – Endpoint e mappatura
+# OctoTable API – Endpoint e mappatura (v4 — CRUD testato su sandbox reale)
 
-**Riferimento:** screenshot documentazione Postman + [Octotable APIs (Public API)](https://documenter.getpostman.com/view/50380496/2sB3dK1YWg).
+**Riferimento:** GitBook OctoTable API + Postman collection + test diretti sugli endpoint.
 
 ---
 
 ## 1. Sottoscrizione necessaria
 
-Per usare l’API OctoTable in produzione serve un piano che includa **“Collegamenti esterni (API)”**:
+Per usare l'API OctoTable in produzione serve un piano che includa **"Collegamenti esterni (API)"**:
 
 | Piano   | Prezzo (IVA esclusa) | API |
 |---------|------------------------|-----|
@@ -15,111 +15,213 @@ Per usare l’API OctoTable in produzione serve un piano che includa **“Colleg
 | PREMIUM | € 23,20 / mese        | ✅ Sì |
 | EVO     | € 39,20 / mese        | ✅ Sì |
 
-**In pratica:** serve almeno **DIGIMENU** (o superiore). Senza sottoscrizione le chiamate API non sono disponibili.
-
-La **doc** e l’**adapter** nel progetto si possono scrivere e tenere pronti anche prima di attivare il piano; l’attivazione serve quando vuoi configurare le credenziali e andare in produzione.
+**Sandbox gratuita:** Il passo "Create Client" crea automaticamente una fake property per testing (sandbox: true). Disponibile per un periodo limitato.
 
 ---
 
-## 2. Base URL e autenticazione
+## 2. Base URL e autenticazione (VERIFICATI)
 
-- **Base URL:** `https://api.octotable.com/v1`
-- **Stato API:** PREVIEW (possibili modifiche future).
+**ATTENZIONE:** `api.octocrate.com` NON ESISTE (DNS ENOTFOUND). I soli domini validi sono:
 
-### OAuth 2.0 Client Credentials
+| Servizio | Base URL | Stato |
+|----------|----------|-------|
+| Account (Create Client) | `https://api.octotable.com/octotable-pms/api/v2` | Testato: 201 Created OK |
+| Auth (Token) | `https://api.octotable.com/octotable-auth/api/v2` | Testato: 200 OK con creds reali |
+| PMS (Reservations, Properties) | `https://api.octotable.com/octotable-pms/api/v2` | Testato: CRUD completo OK |
 
-1. Ottieni **Client ID** e **Client Secret** dal pannello OctoTable (dopo aver attivato un piano con API).
-2. **Token:**  
-   `POST https://api.octotable.com/v1/oauth/token`  
-   Body (JSON): `grant_type=client_credentials`, `client_id`, `client_secret`.
-3. Nelle chiamate successive usa l’`access_token` nell’header:  
-   `Authorization: Bearer <access_token>`.
+### Step 1: Create Client (una tantum, senza autenticazione)
+`POST https://api.octotable.com/octotable-pms/api/v2/api-account/oauth2/client`
 
-L’adapter può cachare il token e rinnovarlo quando scade (es. 401).
+Body JSON (**formato array**, campo `redirect_uri` obbligatorio al root + `sandbox_property` annidato):
+```json
+[{
+  "redirect_uri": "http://localhost:8183/main-page",
+  "sandbox_property": {
+    "name": "Nome Ristorante",
+    "username": "unique.username.123",
+    "password": "StrongPass123!",
+    "description": "Descrizione ristorante",
+    "email": "email@example.com",
+    "website": "https://example.com"
+  }
+}]
+```
+
+Risposta (201 Created): `client_id`, `client_secret`, `id`, property con `sandbox: true`
+
+**Testato con successo il 2026-02-10.** La sandbox crea automaticamente: 2 servizi (Lunch/Dinner), 0 rooms (da creare).
+
+### Step 2: Create Token (OAuth 2.0 Client Credentials)
+`POST https://api.octotable.com/octotable-auth/api/v2/oauth2/token`
+
+**IMPORTANTE:** Il token endpoint NON accetta JSON (restituisce 415). Usa `x-www-form-urlencoded`:
+
+Headers: `Content-Type: application/x-www-form-urlencoded`, `Accept: application/json`
+
+Body (form-urlencoded):
+- `grant_type=client_credentials`
+- `client_id=<your_client_id>`
+- `client_secret=<your_client_secret>`
+
+Risposta: `{ "access_token": "...", "expires_in": 1440, "type": "Bearer" }`
+
+L'adapter cache il token e lo rinnova automaticamente.
 
 ---
 
-## 3. Endpoint Reservations
+## 3. Properties (Ristoranti)
+
+Base: `https://api.octotable.com/octotable-pms/api/v2`
+Header obbligatorio: `Property: <property_id>`
 
 | Operazione | Metodo | Endpoint | Note |
 |------------|--------|----------|------|
-| List       | GET    | `/reservations` | Query: `restaurantId` (obbl.), `start_date`, `end_date`, `client_phone`, `offset`, `limit` |
-| Create     | POST   | `/reservations` | Body JSON (vedi sotto) |
-| Modify     | PATCH  | `/reservations/{reservation_id}` | Campi modificabili come in Create |
-| Cancel     | DELETE | `/reservations/{reservation_id}` | Nessun body |
+| Find all | GET | `/properties` | Tutti i ristoranti |
+| Find one | GET | `/properties/{id}` | Per ID |
+| Create | POST | `/properties` | Body: name, city, cap, address, latitude, longitude, phone, description |
+| Update | PUT | `/properties/{id}` | Stessi campi di Create |
+| Delete | DELETE | `/properties/{id}` | Elimina |
 
-### List (GET /reservations)
+---
 
-- **Query params:**
-  - `restaurantId` (stringa) – **obbligatorio**
-  - `start_date` (YYYY-MM-DD) – opzionale
-  - `end_date` (YYYY-MM-DD) – opzionale
-  - `client_phone` (stringa) – opzionale
-  - `offset`, `limit` – paginazione
+## 4. Endpoint Reservations
 
-- **Uso nel nostro backend:**
-  - **Lista per giorno:** `restaurantId` + `start_date` = `end_date` = giorno richiesto (es. `dayISO`).
-  - **Lista per telefono:** `restaurantId` + `client_phone` = numero normalizzato.
+Base: `https://api.octotable.com/octotable-pms/api/v2`
+Header obbligatorio: `Property: <property_id>`, `Authorization: Bearer <token>`
+
+| Operazione | Metodo | Endpoint | Note |
+|------------|--------|----------|------|
+| List | GET | `/reservations` | Query: `start_date`, `end_date`, `text_search`, `incoming` |
+| Create | POST | `/reservations` | Body JSON (vedi sotto) |
+| Update | PUT | `/reservations/{id}` | Campi modificabili |
+| Delete | DELETE | `/reservations/{id}` | Nessun body |
 
 ### Create (POST /reservations)
 
-- **Body (JSON):**
-  - `restaurant_id` (stringa) – **obbligatorio**
-  - `date` (YYYY-MM-DD) – **obbligatorio**
-  - `time` (HH:MM:SS o HH:MM) – **obbligatorio**
-  - `people` (numero) – **obbligatorio**
-  - `first_name`, `last_name` (stringhe) – opzionali ma utili; si può mandare il nome unico in `first_name`
-  - `email`, `phone` (stringhe) – opzionali
-  - `notes` (stringa) – opzionale
-  - `room_id`, `table_id` (stringhe) – opzionali
-  - `client_id` (stringa) – opzionale (cliente esistente)
+Body JSON — **tutti obbligatori** (verificato: senza service_id o room_id restituisce errore):
+- `start_date` (string, YYYY-MM-DD)
+- `start_hour` (string, HH:mm:ss)
+- `pax` (number)
+- `service_id` (number) — **OBBLIGATORIO** (Lunch/Dinner, da GET /services)
+- `room_id` (number) — **OBBLIGATORIO** (da GET /rooms, deve avere tavoli)
+- `channel` (string) — `"OCTOTABLE_ADMIN"`
+- `customer` (object):
+  - `first_name` (string)
+  - `last_name` (string)
+  - `phone` (string)
+- `notes` (string) — opzionale
 
-- **Mappatura dal nostro contratto:**  
-  `day` → `date`, `time` → `time`, `people` → `people`, `name` → `first_name` (e opz. `last_name`), `phone` → `phone`, `notes` → `notes`.
+### Update (PUT /reservations/{id})
 
-### Modify (PATCH /reservations/{reservation_id})
+Body JSON — **richiede corpo COMPLETO** (verificato: body parziale causa errore 500):
+- `start_date` (string, YYYY-MM-DD) — **NOTA:** usa `start_date` (NON `start_day`!)
+- `start_hour` (string, HH:mm:ss)
+- `pax` (number)
+- `service_id` (number)
+- `room_id` (number)
+- `channel` (string)
+- `customer` (object con `id` obbligatorio dalla prenotazione originale):
+  - `id` (number) — **OBBLIGATORIO per update**
+  - `first_name` (string)
+  - `last_name` (string)
+  - `phone` (string)
 
-- Stessi campi modificabili (es. `date`, `time`, `people`, `notes`).  
-- **Mappatura:** `new_day` → `date`, `new_time` → `time`, `new_people` → `people`.
+### List (GET /reservations)
 
-### Cancel (DELETE /reservations/{reservation_id})
+Query params:
+- `start_date` (YYYY-MM-DD)
+- `end_date` (YYYY-MM-DD)
+- `text_search` (string) — per cercare per telefono
+- `incoming` (`"true"`) — solo future
 
-- Nessun body.  
-- **Mappatura:** nostro `booking_id` = OctoTable `reservation_id`.
+### Risposta
+
+Tutte le liste sono wrappate in: `{ "data": [...] }`
+
+Stati da filtrare (non mostrare): `CANCELLED`, `REJECTED`, `EXPIRED`
 
 ---
 
-## 4. Contratto nostro ↔ OctoTable
+## 5. Booking Engine (Slots / Disponibilità)
+
+| Operazione | Metodo | Endpoint | Note |
+|------------|--------|----------|------|
+| Available slots | GET | `/booking/slots` | Query: `start_date`, `pax`, `service_id`, `slot_id_room` |
+| Available rooms | GET | `/booking/rooms` | Query: `start_date`, `start_time`, `pax`, `service_id` |
+| Booking link | GET | `/booking/link` | Link iframe booking engine |
+
+---
+
+## 6. Contratto nostro → OctoTable (mappatura)
 
 | Noi (reservations.js / tool) | OctoTable |
 |------------------------------|-----------|
-| `createReservation({ restaurantId, day, time, people, name, phone, notes })` | POST `/reservations` con `restaurant_id`, `date`, `time`, `people`, `first_name`/`last_name`, `phone`, `notes` |
-| `listReservationsByPhone(restaurantId, phone)` | GET `/reservations?restaurantId=...&client_phone=...` |
-| `listReservationsByDay(restaurantId, dayISO)` | GET `/reservations?restaurantId=...&start_date=dayISO&end_date=dayISO` |
-| `updateReservation(restaurantId, bookingId, { new_day, new_time, new_people })` | PATCH `/reservations/{bookingId}` con `date`, `time`, `people` |
-| `deleteReservation(restaurantId, bookingId)` | DELETE `/reservations/{bookingId}` |
-
-L’adapter `reservations-octotable.js` espone le stesse funzioni e firme sopra, chiamando questi endpoint.
-
----
-
-## 5. Configurazione ristorante
-
-Per ogni `restaurantId` che usa OctoTable, in `src/config/ristoranti.json` (o equivalente) si può aggiungere:
-
-- **`octotable_restaurant_id`** (stringa): ID ristorante in OctoTable, usato come `restaurantId` / `restaurant_id` nelle chiamate API.  
-  Se assente, l’adapter può usare `restaurantId` così com’è.
-
-Variabili d’ambiente consigliate per l’adapter:
-
-- `OCTOTABLE_BASE_URL` – default `https://api.octotable.com/v1`
-- `OCTOTABLE_CLIENT_ID`
-- `OCTOTABLE_CLIENT_SECRET`
+| `restaurantId` | `property_id` (header `Property`) |
+| `day` | `start_date` (create) / `start_day` (update) |
+| `time` | `start_hour` (formato HH:mm:ss) |
+| `people` | `pax` |
+| `name` | `customer.first_name` + `customer.last_name` |
+| `phone` | `customer.phone` |
+| `booking_id` | `id` (reservation ID) |
 
 ---
 
-## 6. Ordine dei passi (riepilogo)
+## 7. Configurazione in ristoranti.json
 
-1. **Ora:** doc (questo file) + adapter `reservations-octotable.js` – nessun tool nuovo, nessun cambio alle route esistenti.
-2. **Quando attivi OctoTable:** sottoscrivi almeno DIGIMENU, ottieni Client ID/Secret, configura `octotable_restaurant_id` e env; poi si può commutare il backend da Google Sheets/Calendar a OctoTable (es. `reservations.js` che usa l’adapter se configurato).
-3. **Dopo:** eventuali nuovi tool Vapi o modifiche ai tool esistenti (stesso contratto API, solo backend diverso).
+Per ogni ristorante che usa OctoTable:
+
+```json
+{
+  "nome_ristorante": {
+    "enabled": true,
+    "reservations_backend": "octotable",
+    "octotable_property_id": "99841",
+    "octotable_client_id_env": "OCTOTABLE_CLIENT_ID_NOMERISTORANTE",
+    "octotable_client_secret_env": "OCTOTABLE_CLIENT_SECRET_NOMERISTORANTE"
+  }
+}
+```
+
+In `.env` e Render:
+```
+OCTOTABLE_CLIENT_ID_NOMERISTORANTE=public_xxxxx
+OCTOTABLE_CLIENT_SECRET_NOMERISTORANTE=xxxxx-xxxx-xxxx
+```
+
+---
+
+## 8. Variabili d'ambiente
+
+| Variabile | Default | Note |
+|-----------|---------|------|
+| `OCTOTABLE_PMS_URL` | `https://api.octotable.com/octotable-pms/api/v2` | Base URL PMS (verificato) |
+| `OCTOTABLE_AUTH_URL` | `https://api.octotable.com/octotable-auth/api/v2` | Base URL Auth (verificato) |
+| `OCTOTABLE_CLIENT_ID` | - | Fallback globale |
+| `OCTOTABLE_CLIENT_SECRET` | - | Fallback globale |
+
+---
+
+## 9. Verifica domini (test 2026-02-10)
+
+| Dominio | DNS | Ruolo |
+|---------|-----|-------|
+| `api.octotable.com` | 5.249.134.120 | PMS + Auth + Account (TUTTO) |
+| `api.octorate.com` | 5.249.134.120 | Auth (alternativo, stesso IP) |
+| `api.octocrate.com` | **ENOTFOUND** | NON USARE |
+
+## 10. Setup sandbox (testato 2026-02-10)
+
+Sequenza per creare una sandbox funzionante:
+
+1. **Create Client** → ottieni `client_id`, `client_secret`, `property_id`
+2. **Create Token** → ottieni `access_token`
+3. **Crea almeno 1 Room** (POST /rooms) → ottieni `room_id`
+4. **Crea almeno 1 Table** in ogni room (POST /room/{room_id}/table) → necessario per disponibilità
+5. La sandbox già include 2 servizi pre-configurati (Lunch: 12-15, Dinner: 19-23)
+6. Ora puoi creare prenotazioni con: `service_id`, `room_id`, `start_date`, `start_hour`, `pax`, `channel`, `customer`
+
+### Sandbox di test attiva:
+- **property_id:** 1001842
+- **client_id:** public_18074905614da2f1b2-2a23-4c41-bcc1-6c1781ab9
+- **room_id:** 26157 (Sala Principale, 3 tavoli da 4 posti)
+- **services:** Lunch (39492), Dinner (39491)

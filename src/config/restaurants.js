@@ -8,6 +8,17 @@ function getRestaurantConfig(restaurantId) {
   return cfg;
 }
 
+/**
+ * Controlla se un ristorante è attivo.
+ * Se il campo `enabled` non esiste, si considera attivo (backward-compatible).
+ */
+function isRestaurantEnabled(restaurantId) {
+  const cfg = config[restaurantId];
+  if (!cfg) return false;
+  return cfg.enabled !== false; // default true se non specificato
+}
+
 module.exports = {
-  getRestaurantConfig
+  getRestaurantConfig,
+  isRestaurantEnabled,
 };

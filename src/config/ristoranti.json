@@ -1,5 +1,6 @@
 {
   "roma": {
+    "enabled": true,
     "name": "Ristorante Roma",
     "kb_path": "kb/roma.json",
     "sheet_id": "1MnaSIGqhieZVnxtnw_lSC-Uz1wNzHbTWgWg8WC9s1Lk",
@@ -12,6 +13,7 @@
   },
 
   "modena01": {
+    "enabled": true,
     "name": "Da Michele",
     "kb_path": "kb/modena01.json",
     "sheet_id": "1UCCNju7Lo6EyiQakM98FE4ktZOV3pMtHUt5ZQQOTQDA",
@@ -21,7 +23,44 @@
     "max_people": 4,
     "reservations_backend": "resos",
     "resos_restaurant_id": "JLAs2CviunNCSEfbt",
+    "resos_api_key_env": "RESOS_API_KEY",
     "prompt_version": "v1.0"
+  },
+
+  "milano01": {
+    "enabled": false,
+    "reservations_backend": "resos",
+    "resos_restaurant_id": "XYZ123",
+    "resos_api_key_env": "RESOS_API_KEY_MILANO01"
+  },
+
+  "demo01": {
+    "enabled": true,
+    "name": "Ristorante Demo (test)",
+    "kb_path": "kb/demo01.json",
+    "timezone": "Europe/Rome",
+    "sms_number": "+390000000000",
+    "max_people": 6,
+    "reservations_backend": "sheets",
+    "sheet_id": "",
+    "calendar_id": "",
+    "prompt_version": "v1.0-demo",
+    "_note": "Tenant di test/staging. Non tocca dati reali. Usare per prove e demo."
+  },
+
+  "octodemo": {
+    "enabled": true,
+    "name": "Trattoria OctoDemo",
+    "kb_path": "kb/octodemo.json",
+    "timezone": "Europe/Rome",
+    "sms_number": "+390000000000",
+    "max_people": 4,
+    "reservations_backend": "octotable",
+    "octotable_property_id": "1001842",
+    "octotable_room_id": "26157",
+    "octotable_client_id_env": "OCTOTABLE_CLIENT_ID",
+    "octotable_client_secret_env": "OCTOTABLE_CLIENT_SECRET",
+    "prompt_version": "v1.0-octodemo",
+    "_note": "Demo OctoTable sandbox. Property sandbox, 3 tavoli da 4 posti. Servizi: Lunch (39492) 12-15, Dinner (39491) 19-23."
   }
 }
-

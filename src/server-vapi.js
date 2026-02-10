@@ -2,6 +2,9 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
+const cors = require('cors');
+
 // Tools API handlers
 const checkOpenings = require('./api/check_openings');
 const createBooking = require('./api/create_booking');
@@ -14,13 +17,26 @@ const resolveRelativeDay = require('./api/resolve_relative_day');
 const resolveRelativeTime = require('./api/resolve_relative_time');
 const isOpenNow = require('./api/is_open_now');
 
-
 const logger = require('./logger');
 const metrics = require('./metrics');
 const reservations = require('./reservations');
 const { getReservationsBackend } = reservations;
 
 const app = express();
+
+// --- Security headers (helmet) ---
+app.use(helmet());
+
+// --- CORS ---
+// In produzione consenti solo origini specifiche; in dev consenti tutto.
+const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : ['*'];
+
+app.use(cors({
+  origin: ALLOWED_ORIGINS.includes('*') ? true : ALLOWED_ORIGINS,
+  methods: ['GET', 'POST'],
+}));
 
 // Middleware base
 app.use(bodyParser.json());
@@ -109,6 +125,33 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- Rate limiting (dopo estrazione restaurantId, prima delle route) ---
+const { rateLimitMiddleware, getSnapshot: getRateLimitSnapshot } = require('./rate-limiter');
+app.use(rateLimitMiddleware);
+
+// --- Kill switch per ristorante ---
+const { isRestaurantEnabled } = require('./config/restaurants');
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/')) return next();
+  if (!req.restaurantId) return next(); // nessun restaurant_id → lascia passare, l'API handler darà errore di validazione
+
+  if (!isRestaurantEnabled(req.restaurantId)) {
+    logger.warn('restaurant_disabled', {
+      request_id: req.requestId,
+      restaurant_id: req.restaurantId,
+    });
+
+    return res.json({
+      ok: false,
+      error_code: 'RESTAURANT_DISABLED',
+      error_message: 'Il servizio prenotazioni per questo ristorante è temporaneamente sospeso. Riprova più tardi o chiama direttamente il ristorante.',
+    });
+  }
+
+  next();
+});
+
 // Porta
 const PORT = process.env.PORT || 3000;
 
@@ -122,10 +165,21 @@ app.get('/status', (req, res) => {
 
 // Metrics endpoint — monitoring dashboard
 app.get('/metrics', (req, res) => {
-  return res.json(metrics.getSnapshot());
+  const snapshot = metrics.getSnapshot();
+  snapshot.rate_limiting = getRateLimitSnapshot();
+  return res.json(snapshot);
 });
 
-// Debug openings
+// --- Debug endpoints (solo in sviluppo, bloccati in produzione) ---
+const isProduction = process.env.NODE_ENV === 'production';
+
+app.use('/debug', (req, res, next) => {
+  if (isProduction) {
+    return res.status(404).json({ ok: false, error: 'Not found' });
+  }
+  next();
+});
+
 const kb = require('./kb');
 const timeUtils = require('./time-utils');
 

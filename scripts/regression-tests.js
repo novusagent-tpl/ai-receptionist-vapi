@@ -443,6 +443,31 @@ async function testHealthcheck() {
   assert('GET /status – ok:true', data.ok === true, data.ok, true);
 }
 
+async function testMultiTenantIsolation() {
+  console.log(`\n${CYAN}═══ multi-tenant isolation ═══${RESET}`);
+
+  const openDay = getNextWeekday(2); // martedì – aperto per modena01
+
+  // 1. modena01 e roma restituiscono dati diversi
+  const r1 = await post('/api/check_openings', { restaurant_id: 'modena01', day: openDay });
+  const r2 = await post('/api/check_openings', { restaurant_id: 'roma', day: openDay });
+  assert('modena01 e roma – entrambi ok:true', r1.ok === true && r2.ok === true, { m: r1.ok, r: r2.ok }, true);
+  assert('modena01 e roma – restaurant_id diverso', r1.restaurant_id === 'modena01' && r2.restaurant_id === 'roma', { m: r1.restaurant_id, r: r2.restaurant_id }, 'diversi');
+
+  // 2. restaurant_id inesistente → errore (no leak dati)
+  const r3 = await post('/api/check_openings', { restaurant_id: 'ristorante_fake_xyz', day: openDay });
+  assert('ID inesistente – errore', r3.ok === false || r3.error_code != null, r3, 'errore');
+
+  // 3. FAQ: modena01 ha le sue FAQ, non quelle di roma
+  const r4 = await post('/api/faq', { restaurant_id: 'modena01', question: 'Avete parcheggio?' });
+  assert('FAQ modena01 – answer non null', r4.answer !== null, r4.answer, 'non null');
+
+  // 4. is_open_now per restaurant diversi non si mischiano
+  const r5 = await post('/api/is_open_now', { restaurant_id: 'modena01' });
+  const r6 = await post('/api/is_open_now', { restaurant_id: 'roma' });
+  assert('is_open_now – entrambi ok:true', r5.ok === true && r6.ok === true, { m: r5.ok, r: r6.ok }, true);
+}
+
 // ─────────────────────────────────────────────
 // Runner
 // ─────────────────────────────────────────────
@@ -464,6 +489,7 @@ async function run() {
     await testListBookingsValidation();
     await testModifyBookingValidation();
     await testCancelBookingValidation();
+    await testMultiTenantIsolation();
   } catch (err) {
     console.log(`\n${RED}ERRORE FATALE: ${err.message}${RESET}`);
     console.log(`Verifica che il server sia avviato su ${BASE_URL}`);
