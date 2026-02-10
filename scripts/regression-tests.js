@@ -16,6 +16,12 @@
  *  - modify_booking (validazione campi mancanti)
  *  - cancel_booking (validazione campi mancanti)
  *  - list_bookings (validazione campi mancanti)
+ *
+ * OctoTable (octodemo – sandbox reale):
+ *  - check_openings (giorno aperto/chiuso, orario in/fuori slot)
+ *  - is_open_now
+ *  - Validazione (manca day, manca phone, MAX_PEOPLE_EXCEEDED, manca booking_id)
+ *  - CRUD completo: create → list → modify → cancel (su sandbox reale)
  */
 
 const BASE_URL = process.argv[2] || 'http://localhost:3000';
@@ -469,6 +475,222 @@ async function testMultiTenantIsolation() {
 }
 
 // ─────────────────────────────────────────────
+// OctoTable Tests (octodemo — sandbox reale)
+// ─────────────────────────────────────────────
+
+async function testOctoTableCheckOpenings() {
+  console.log(`\n${CYAN}═══ OctoTable: check_openings (octodemo) ═══${RESET}`);
+
+  // octodemo: Lun-Sab aperto, Domenica chiuso
+  // Lunch 12-15, Dinner 19-23
+
+  // 1. Giorno aperto (mercoledì = weekday 3)
+  const openDay = getNextWeekday(3);
+  const r1 = await post('/api/check_openings', {
+    restaurant_id: 'octodemo',
+    day: openDay,
+  });
+  assert('octodemo giorno aperto – ok:true', r1.ok === true, r1.ok, true);
+  assert('octodemo giorno aperto – closed:false', r1.closed === false, r1.closed, false);
+  assert('octodemo giorno aperto – ha slots', Array.isArray(r1.slots) && r1.slots.length > 0, r1.slots?.length, '>0');
+
+  // 2. Giorno chiuso (domenica = weekday 7)
+  const closedDay = getNextWeekday(7);
+  const r2 = await post('/api/check_openings', {
+    restaurant_id: 'octodemo',
+    day: closedDay,
+  });
+  assert('octodemo giorno chiuso – ok:true', r2.ok === true, r2.ok, true);
+  assert('octodemo giorno chiuso – closed:true', r2.closed === true, r2.closed, true);
+
+  // 3. Orario in slot (20:00 = cena)
+  const r3 = await post('/api/check_openings', {
+    restaurant_id: 'octodemo',
+    day: openDay,
+    time: '20:00',
+  });
+  assert('octodemo orario in slot – ok:true', r3.ok === true, r3.ok, true);
+  assert('octodemo orario in slot – available è boolean', typeof r3.available === 'boolean', typeof r3.available, 'boolean');
+
+  // 4. Orario fuori slot (16:00 = tra pranzo e cena)
+  const r4 = await post('/api/check_openings', {
+    restaurant_id: 'octodemo',
+    day: openDay,
+    time: '16:00',
+  });
+  assert('octodemo orario fuori slot – available:false', r4.available === false, r4.available, false);
+  assert('octodemo orario fuori slot – reason:not_in_openings', r4.reason === 'not_in_openings', r4.reason, 'not_in_openings');
+
+  // 5. restaurant_id corretto nella risposta
+  assert('octodemo – restaurant_id nella risposta', r1.restaurant_id === 'octodemo', r1.restaurant_id, 'octodemo');
+}
+
+async function testOctoTableIsOpenNow() {
+  console.log(`\n${CYAN}═══ OctoTable: is_open_now (octodemo) ═══${RESET}`);
+
+  const r1 = await post('/api/is_open_now', {
+    restaurant_id: 'octodemo',
+  });
+  assert('octodemo is_open_now – ok:true', r1.ok === true, r1.ok, true);
+  assert('octodemo is_open_now – open_now è boolean', typeof r1.open_now === 'boolean', typeof r1.open_now, 'boolean');
+}
+
+async function testOctoTableValidation() {
+  console.log(`\n${CYAN}═══ OctoTable: validazione (octodemo) ═══${RESET}`);
+
+  // 1. create_booking – manca day
+  const r1 = await post('/api/create_booking', {
+    restaurant_id: 'octodemo',
+    time: '20:00',
+    people: 2,
+    name: 'Test OctoTable',
+    phone: '+393331234567',
+  });
+  assert('octodemo create – manca day – ok:false', r1.ok === false, r1.ok, false);
+
+  // 2. create_booking – manca phone
+  const r2 = await post('/api/create_booking', {
+    restaurant_id: 'octodemo',
+    day: '2026-03-15',
+    time: '20:00',
+    people: 2,
+    name: 'Test OctoTable',
+  });
+  assert('octodemo create – manca phone – ok:false', r2.ok === false, r2.ok, false);
+
+  // 3. create_booking – MAX_PEOPLE_EXCEEDED (octodemo max=4)
+  const r3 = await post('/api/create_booking', {
+    restaurant_id: 'octodemo',
+    day: '2026-03-15',
+    time: '20:00',
+    people: 10,
+    name: 'Test OctoTable',
+    phone: '+393331234567',
+  });
+  assert('octodemo create – troppe persone – ok:false', r3.ok === false, r3.ok, false);
+  assert('octodemo create – MAX_PEOPLE_EXCEEDED', r3.error_code === 'MAX_PEOPLE_EXCEEDED', r3.error_code, 'MAX_PEOPLE_EXCEEDED');
+
+  // 4. list_bookings – manca phone
+  const r4 = await post('/api/list_bookings', {
+    restaurant_id: 'octodemo',
+  });
+  assert('octodemo list – manca phone – ok:false', r4.ok === false, r4.ok, false);
+
+  // 5. modify_booking – manca booking_id
+  const r5 = await post('/api/modify_booking', {
+    restaurant_id: 'octodemo',
+    new_people: 3,
+  });
+  assert('octodemo modify – manca booking_id – ok:false', r5.ok === false, r5.ok, false);
+
+  // 6. cancel_booking – manca booking_id
+  const r6 = await post('/api/cancel_booking', {
+    restaurant_id: 'octodemo',
+  });
+  assert('octodemo cancel – manca booking_id – ok:false', r6.ok === false, r6.ok, false);
+}
+
+async function testOctoTableCRUD() {
+  console.log(`\n${CYAN}═══ OctoTable: CRUD COMPLETO (octodemo → sandbox reale) ═══${RESET}`);
+
+  // Usa un giorno futuro (prossimo mercoledì) per evitare conflitti
+  const testDay = getNextWeekday(3); // mercoledì
+  const testTime = '20:30';
+  const testPhone = '+393339999001';
+  const testName = 'Test CRUD Auto';
+
+  // ─── STEP 1: check_openings ───
+  console.log(`\n  ${YELLOW}Step 1: check_openings${RESET}`);
+  const openCheck = await post('/api/check_openings', {
+    restaurant_id: 'octodemo',
+    day: testDay,
+    time: testTime,
+  });
+  assert('CRUD 1 – check_openings ok:true', openCheck.ok === true, openCheck.ok, true);
+  assert('CRUD 1 – available:true', openCheck.available === true, openCheck.available, true);
+
+  if (!openCheck.available) {
+    console.log(`  ${YELLOW}SKIP: orario non disponibile, CRUD non eseguibile${RESET}`);
+    return;
+  }
+
+  // ─── STEP 2: create_booking ───
+  console.log(`\n  ${YELLOW}Step 2: create_booking${RESET}`);
+  const created = await post('/api/create_booking', {
+    restaurant_id: 'octodemo',
+    day: testDay,
+    time: testTime,
+    people: 2,
+    name: testName,
+    phone: testPhone,
+  });
+  assert('CRUD 2 – create ok:true', created.ok === true, created.ok, true);
+  assert('CRUD 2 – ha booking_id', !!created.booking_id, created.booking_id, 'non null');
+
+  if (!created.ok || !created.booking_id) {
+    console.log(`  ${RED}STOP: create fallito, non posso continuare CRUD${RESET}`);
+    console.log(`  Dettaglio: ${JSON.stringify(created)}`);
+    return;
+  }
+
+  const bookingId = created.booking_id;
+  console.log(`  Booking creato: ${bookingId}`);
+
+  // ─── STEP 3: list_bookings ───
+  console.log(`\n  ${YELLOW}Step 3: list_bookings${RESET}`);
+  const listed = await post('/api/list_bookings', {
+    restaurant_id: 'octodemo',
+    phone: testPhone,
+  });
+  assert('CRUD 3 – list ok:true', listed.ok === true, listed.ok, true);
+  const listResults = listed.results || [];
+  assert('CRUD 3 – count >= 1', listResults.length >= 1, listResults.length, '>=1');
+
+  // Verifica che il booking appena creato sia nella lista (campo: booking_id)
+  const found = listResults.some(b => String(b.booking_id || b.id) === String(bookingId));
+  assert('CRUD 3 – booking trovato in lista', found === true, found, true);
+
+  // ─── STEP 4: modify_booking (cambia persone: 2 → 3) ───
+  console.log(`\n  ${YELLOW}Step 4: modify_booking (people 2 → 3)${RESET}`);
+  const modified = await post('/api/modify_booking', {
+    restaurant_id: 'octodemo',
+    booking_id: bookingId,
+    new_people: 3,
+  });
+  assert('CRUD 4 – modify ok:true', modified.ok === true, modified.ok, true);
+
+  // Verifica la modifica con una nuova list
+  const listed2 = await post('/api/list_bookings', {
+    restaurant_id: 'octodemo',
+    phone: testPhone,
+  });
+  const list2Results = listed2.results || [];
+  const modifiedBooking = list2Results.find(b => String(b.booking_id || b.id) === String(bookingId));
+  if (modifiedBooking) {
+    assert('CRUD 4 – people aggiornato a 3', modifiedBooking.people === 3 || modifiedBooking.pax === 3, modifiedBooking.people || modifiedBooking.pax, 3);
+  }
+
+  // ─── STEP 5: cancel_booking ───
+  console.log(`\n  ${YELLOW}Step 5: cancel_booking${RESET}`);
+  const cancelled = await post('/api/cancel_booking', {
+    restaurant_id: 'octodemo',
+    booking_id: bookingId,
+  });
+  assert('CRUD 5 – cancel ok:true', cancelled.ok === true, cancelled.ok, true);
+
+  // Verifica che non compaia più nella lista
+  const listed3 = await post('/api/list_bookings', {
+    restaurant_id: 'octodemo',
+    phone: testPhone,
+  });
+  const list3Results = listed3.results || [];
+  const stillThere = list3Results.some(b => String(b.booking_id || b.id) === String(bookingId));
+  assert('CRUD 5 – booking rimosso dalla lista', stillThere === false, stillThere, false);
+
+  console.log(`\n  ${GREEN}✓ Ciclo CRUD OctoTable completo!${RESET}`);
+}
+
+// ─────────────────────────────────────────────
 // Runner
 // ─────────────────────────────────────────────
 
@@ -490,6 +712,13 @@ async function run() {
     await testModifyBookingValidation();
     await testCancelBookingValidation();
     await testMultiTenantIsolation();
+
+    // OctoTable (octodemo – sandbox reale)
+    console.log(`\n${YELLOW}──── OctoTable Integration Tests ────${RESET}`);
+    await testOctoTableCheckOpenings();
+    await testOctoTableIsOpenNow();
+    await testOctoTableValidation();
+    await testOctoTableCRUD();
   } catch (err) {
     console.log(`\n${RED}ERRORE FATALE: ${err.message}${RESET}`);
     console.log(`Verifica che il server sia avviato su ${BASE_URL}`);

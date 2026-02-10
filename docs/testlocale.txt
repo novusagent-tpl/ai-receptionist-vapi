@@ -1,0 +1,162 @@
+PS C:\Users\topal\Desktop\ai-receptionist-vapi> node scripts/regression-tests.js
+
+╔══════════════════════════════════════════╗
+║   AI Receptionist – Regression Tests     ║
+╚══════════════════════════════════════════╝
+
+Server: http://localhost:3000
+
+
+═══ healthcheck ═══
+  PASS  GET /status – ok:true
+
+═══ check_openings ═══
+  PASS  Giorno aperto – ok:true
+  PASS  Giorno aperto – closed:false
+  PASS  Giorno aperto – ha slots
+  PASS  Giorno chiuso – ok:true
+  PASS  Giorno chiuso – closed:true
+  PASS  Orario in slot – ok:true
+  PASS  Orario in slot – available è boolean
+  PASS  Orario fuori slot – available:false
+  PASS  Orario fuori slot – reason:not_in_openings
+  PASS  Manca restaurant_id – ok:false
+  PASS  Manca restaurant_id – VALIDATION_ERROR
+  PASS  Manca day – ok:false
+  PASS  Manca day – VALIDATION_ERROR
+  PASS  Day formato errato – ok:false
+  PASS  Day formato errato – VALIDATION_ERROR
+  PASS  Time formato errato – ok:false
+  PASS  Time formato errato – VALIDATION_ERROR
+  PASS  Natale (override) – closed:true
+
+═══ resolve_relative_day ═══
+  PASS  domani – ok:true
+  PASS  domani – data corretta
+  PASS  oggi – ok:true
+  PASS  oggi – ha date
+  PASS  dopodomani – ok:true
+  PASS  sabato – ok:true
+  PASS  sabato – ha date
+  PASS  tra 3 giorni – ok:true
+  PASS  Non riconosciuto – ok:false
+  PASS  Non riconosciuto – UNSUPPORTED_RELATIVE_DAY
+  PASS  Manca text – ok:false
+  PASS  Manca text – VALIDATION_ERROR
+
+═══ resolve_relative_time ═══
+  PASS  tra mezz'ora – ok:true
+  PASS  tra mezz'ora – ha time HH:MM
+  PASS  tra 2 ore – ok:true
+  PASS  tra 2 ore – ha time
+  PASS  tra 2 ore – ha day_offset
+  PASS  tra 30 minuti – ok:true
+  PASS  Orario vago – ok:false
+  PASS  Orario vago – VAGUE_TIME
+  PASS  Non relativo – ok:false
+  PASS  Non relativo – UNSUPPORTED_RELATIVE_TIME
+  PASS  Manca text – ok:false
+  PASS  Manca text – VALIDATION_ERROR
+
+═══ is_open_now ═══
+  PASS  modena01 – ok:true
+  PASS  modena01 – open_now è boolean
+  PASS  roma – ok:true
+  PASS  roma – open_now è boolean
+  PASS  Manca restaurant_id – errore
+
+═══ faq ═══
+  PASS  Match esatto – ok:true
+  PASS  Match esatto – answer non null
+  PASS  Match fuzzy – ok:true
+  PASS  Match fuzzy – answer non null
+  PASS  Nessun match – ok:true
+  PASS  Nessun match – answer null
+  PASS  Manca question – ok:false
+  PASS  Manca question – VALIDATION_ERROR
+  PASS  Manca restaurant_id – ok:false
+
+═══ create_booking (solo validazione) ═══
+  PASS  Manca restaurant_id – ok:false
+  PASS  Manca day – ok:false
+  PASS  Manca phone – ok:false
+  PASS  Troppe persone – ok:false
+  PASS  Troppe persone – MAX_PEOPLE_EXCEEDED
+
+═══ list_bookings (solo validazione) ═══
+  PASS  Manca restaurant_id – ok:false
+  PASS  Manca phone – ok:false
+
+═══ modify_booking (solo validazione) ═══
+  PASS  Manca restaurant_id – ok:false
+  PASS  Manca booking_id – ok:false
+
+═══ cancel_booking (solo validazione) ═══
+  PASS  Manca restaurant_id – ok:false
+  PASS  Manca booking_id – ok:false
+
+═══ multi-tenant isolation ═══
+  PASS  modena01 e roma – entrambi ok:true
+  PASS  modena01 e roma – restaurant_id diverso
+  PASS  ID inesistente – errore
+  PASS  FAQ modena01 – answer non null
+  PASS  is_open_now – entrambi ok:true
+
+──── OctoTable Integration Tests ────
+
+═══ OctoTable: check_openings (octodemo) ═══
+  PASS  octodemo giorno aperto – ok:true
+  PASS  octodemo giorno aperto – closed:false
+  PASS  octodemo giorno aperto – ha slots
+  PASS  octodemo giorno chiuso – ok:true
+  PASS  octodemo giorno chiuso – closed:true
+  PASS  octodemo orario in slot – ok:true
+  PASS  octodemo orario in slot – available è boolean
+  PASS  octodemo orario fuori slot – available:false
+  PASS  octodemo orario fuori slot – reason:not_in_openings
+  PASS  octodemo – restaurant_id nella risposta
+
+═══ OctoTable: is_open_now (octodemo) ═══
+  PASS  octodemo is_open_now – ok:true
+  PASS  octodemo is_open_now – open_now è boolean
+
+═══ OctoTable: validazione (octodemo) ═══
+  PASS  octodemo create – manca day – ok:false
+  PASS  octodemo create – manca phone – ok:false
+  PASS  octodemo create – troppe persone – ok:false
+  PASS  octodemo create – MAX_PEOPLE_EXCEEDED
+  PASS  octodemo list – manca phone – ok:false
+  PASS  octodemo modify – manca booking_id – ok:false
+  PASS  octodemo cancel – manca booking_id – ok:false
+
+═══ OctoTable: CRUD COMPLETO (octodemo → sandbox reale) ═══
+
+  Step 1: check_openings
+  PASS  CRUD 1 – check_openings ok:true
+  PASS  CRUD 1 – available:true
+
+  Step 2: create_booking
+  PASS  CRUD 2 – create ok:true
+  PASS  CRUD 2 – ha booking_id
+  Booking creato: 34676384
+
+  Step 3: list_bookings
+  PASS  CRUD 3 – list ok:true
+  PASS  CRUD 3 – count >= 1
+  PASS  CRUD 3 – booking trovato in lista
+
+  Step 4: modify_booking (people 2 → 3)
+  PASS  CRUD 4 – modify ok:true
+  PASS  CRUD 4 – people aggiornato a 3
+
+  Step 5: cancel_booking
+  PASS  CRUD 5 – cancel ok:true
+  PASS  CRUD 5 – booking rimosso dalla lista
+
+  ✓ Ciclo CRUD OctoTable completo!
+
+══════════════════════════════════════════
+  Totale:  103
+  Passati: 103
+  Falliti: 0
+══════════════════════════════════════════
