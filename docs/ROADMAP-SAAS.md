@@ -482,13 +482,16 @@ Contiene:
 ### D2. Eseguire test Vapi
 **Obiettivo:** Verificare comportamento reale.
 
-- [ ] Test modena01 (tutti A-M)
-- [ ] Test roma (subset I + selezione)
+- [ ] Test modena01 (tutti A-M) — test principale, verifica tutta la logica del prompt
+- [ ] Test octodemo (OT1-OT5) — subset CRUD per verificare OctoTable via voce
+- [ ] Test roma (subset I + selezione A1, C1, D1, E1) — subset CRUD per Sheets
 - [ ] Annotare esiti in `test_vapi_chiamate.md`
 - [ ] Fix bug emersi
 - [ ] Re-test se necessario
 
-**Status:** [ ] In attesa (ambiente non disponibile)
+**Ordine:** modena01 completo → octodemo CRUD → roma CRUD. I test B, F, G, H, J, K, L verificano la logica del prompt (identica per tutti) — basta testarli su modena01.
+
+**Status:** [ ] In corso
 
 ---
 

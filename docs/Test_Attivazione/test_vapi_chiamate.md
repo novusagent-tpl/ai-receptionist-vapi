@@ -19,6 +19,7 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 | ------------------- | ---------------------- | ------------- | ---------------------------------------- |
 | Da Michele (Modena) | resOS                  | modena01      | KB: max_people 4, lunedì/domenica chiusi |
 | Ristorante Roma     | Google Sheets/Calendar | roma          | KB: max_people 8, orari da verificare    |
+| Trattoria OctoDemo  | OctoTable (sandbox)    | octodemo      | KB: max_people 4, domenica chiuso, Lun-Sab lunch 12-15 dinner 19-23 |
 
 
 **KB modena01:** martedì–giovedì lunch 12:30–14:30, dinner 19:00–22:30; venerdì/sabato dinner fino 23:30; lunedì e domenica chiusi.
@@ -842,24 +843,119 @@ Eseguire una selezione degli stessi test (es. A1, A2, C1, D1, E1, F1, G1, J1, J2
 
 ---
 
+## OctoDemo – Test CRUD (subset)
+
+Dopo aver completato tutti i test A–M su modena01, eseguire solo il subset CRUD su octodemo per verificare che OctoTable funzioni end-to-end via voce.
+
+### OT1. Prenotazione OctoTable
+
+**Ristorante:** octodemo
+
+**Cliente dice:** "Buongiorno, vorrei prenotare un tavolo per mercoledì alle 20 per 2 persone, il nome è Marco Test."
+
+**Obiettivo:** Flow completo create su OctoTable sandbox. Verificare che la prenotazione arrivi su OctoTable.
+
+**Tool attesi:** resolve_relative_day, check_openings, create_booking
+
+**Esito:**
+
+**Risposte receptionist:**
+
+**Log tool chiamati:**
+
+---
+
+### OT2. Lista prenotazioni OctoTable
+
+**Ristorante:** octodemo
+
+**Cliente dice:** "Ho delle prenotazioni?"
+
+**Obiettivo:** list_bookings su OctoTable. Deve trovare la prenotazione creata in OT1.
+
+**Tool attesi:** list_bookings
+
+**Esito:**
+
+**Risposte receptionist:**
+
+**Log tool chiamati:**
+
+---
+
+### OT3. Modifica prenotazione OctoTable
+
+**Ristorante:** octodemo
+
+**Cliente dice:** "Vorrei cambiare a 3 persone la mia prenotazione."
+
+**Obiettivo:** modify_booking su OctoTable. Verificare che la modifica arrivi.
+
+**Tool attesi:** list_bookings, modify_booking
+
+**Esito:**
+
+**Risposte receptionist:**
+
+**Log tool chiamati:**
+
+---
+
+### OT4. Cancellazione OctoTable
+
+**Ristorante:** octodemo
+
+**Cliente dice:** "Vorrei cancellare la mia prenotazione."
+
+**Obiettivo:** cancel_booking su OctoTable. Verificare che venga rimossa.
+
+**Tool attesi:** list_bookings, cancel_booking
+
+**Esito:**
+
+**Risposte receptionist:**
+
+**Log tool chiamati:**
+
+---
+
+### OT5. Errore provider OctoTable
+
+**Ristorante:** octodemo
+
+**Cliente dice:** "Vorrei prenotare per domenica alle 20 per 2 persone." [domenica chiuso]
+
+**Obiettivo:** check_openings → closed=true. Receptionist dice che è chiuso. Non inventa alternative.
+
+**Tool attesi:** resolve_relative_day, check_openings
+
+**Esito:**
+
+**Risposte receptionist:**
+
+**Log tool chiamati:**
+
+---
+
 ## Riepilogo esiti
 
 
-| Categoria            | Test  | Modena01 | Roma |
-| -------------------- | ----- | -------- | ---- |
-| A. Prenotazione      | A1–A4 |          |      |
-| B. Casi particolari  | B1–B6 |          |      |
-| C. Lista             | C1–C3 |          |      |
-| D. Modifica          | D1–D3 |          |      |
-| E. Cancellazione     | E1–E3 |          |      |
-| F. FAQ               | F1–F4 |          |      |
-| G. Orari             | G1–G3 |          |      |
-| H. Edge cases        | H1–H4 |          |      |
-| J. Handover          | J1–J3 |          |      |
-| K. Telefono          | K1–K3 |          |      |
-| L. Goodbye/Conferma  | L1–L3 |          |      |
-| M. Provider error    | M1–M3 |          |      |
-| I. Roma              | I1–I2 |          |      |
+| Categoria            | Test   | Modena01 | Roma | OctoDemo |
+| -------------------- | ------ | -------- | ---- | -------- |
+| A. Prenotazione      | A1–A4  |          |      |          |
+| B. Casi particolari  | B1–B6  |          |      |          |
+| C. Lista             | C1–C3  |          |      |          |
+| D. Modifica          | D1–D3  |          |      |          |
+| E. Cancellazione     | E1–E3  |          |      |          |
+| F. FAQ               | F1–F4  |          |      |          |
+| G. Orari             | G1–G3  |          |      |          |
+| H. Edge cases        | H1–H4  |          |      |          |
+| J. Handover          | J1–J3  |          |      |          |
+| K. Telefono          | K1–K3  |          |      |          |
+| L. Goodbye/Conferma  | L1–L3  |          |      |          |
+| M. Provider error    | M1–M3  |          |      |          |
+| I. Roma              | I1–I2  |          |      |          |
+| OT. OctoTable CRUD   | OT1–5  |          |      |          |
 
 
 ---

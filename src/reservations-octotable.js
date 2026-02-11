@@ -118,6 +118,102 @@ async function getAccessToken(restaurantId) {
 }
 
 /**
+ * Mappa errori HTTP OctoTable → error_code + error_message leggibili da Vapi/prompt.
+ * Questo permette al system prompt di gestire ogni errore con frasi naturali.
+ */
+function mapOctoTableError(status, json, text, method, path) {
+  const rawMsg = json?.message || json?.error_description || json?.error || '';
+  const rawStr = typeof rawMsg === 'object' ? JSON.stringify(rawMsg) : String(rawMsg);
+  const lower = rawStr.toLowerCase();
+
+  // 503 / 502 / 504 — OctoTable non raggiungibile
+  if (status === 503 || status === 502 || status === 504) {
+    return {
+      error_code: 'PROVIDER_UNAVAILABLE',
+      error_message: 'Il sistema di prenotazione non è raggiungibile al momento. Riprova tra qualche minuto.'
+    };
+  }
+
+  // 401 / 403 — Errore autenticazione
+  if (status === 401 || status === 403) {
+    return {
+      error_code: 'PROVIDER_ERROR',
+      error_message: 'Errore di autenticazione con il sistema di prenotazione. Contattare il supporto tecnico.'
+    };
+  }
+
+  // 429 — Rate limit OctoTable
+  if (status === 429) {
+    return {
+      error_code: 'PROVIDER_UNAVAILABLE',
+      error_message: 'Il sistema di prenotazione è temporaneamente sovraccarico. Riprova tra qualche secondo.'
+    };
+  }
+
+  // 404 — Non trovato
+  if (status === 404) {
+    return {
+      error_code: 'BOOKING_NOT_FOUND',
+      error_message: 'Prenotazione non trovata.'
+    };
+  }
+
+  // 409 — Conflitto / duplicato
+  if (status === 409) {
+    return {
+      error_code: 'DUPLICATE_BOOKING',
+      error_message: 'Risulta già una prenotazione con questi dati.'
+    };
+  }
+
+  // 400 — Bad request: analizza il messaggio per dare un errore specifico
+  if (status === 400) {
+    if (lower.includes('no suitable table') || lower.includes('no table') || lower.includes('table not available') || lower.includes('no available table')) {
+      return {
+        error_code: 'NO_TABLE_AVAILABLE',
+        error_message: 'Non ci sono tavoli disponibili per quell\'orario richiesto.'
+      };
+    }
+    if (lower.includes('pax') || lower.includes('capacity') || lower.includes('too many')) {
+      return {
+        error_code: 'MAX_PEOPLE_EXCEEDED',
+        error_message: 'Il numero di persone supera la capacità disponibile.'
+      };
+    }
+    if (lower.includes('service') || lower.includes('serviceid')) {
+      return {
+        error_code: 'VALIDATION_ERROR',
+        error_message: 'L\'orario richiesto non rientra in nessun servizio attivo (pranzo/cena).'
+      };
+    }
+    if (lower.includes('date') || lower.includes('hour') || lower.includes('time')) {
+      return {
+        error_code: 'VALIDATION_ERROR',
+        error_message: 'Data o orario non validi per la prenotazione.'
+      };
+    }
+    return {
+      error_code: 'VALIDATION_ERROR',
+      error_message: rawStr || 'Dati della prenotazione non validi.'
+    };
+  }
+
+  // 500 — Errore interno OctoTable
+  if (status === 500) {
+    return {
+      error_code: 'PROVIDER_ERROR',
+      error_message: 'Il sistema di prenotazione ha riscontrato un errore interno. Riprova tra qualche minuto.'
+    };
+  }
+
+  // Fallback generico
+  return {
+    error_code: 'PROVIDER_ERROR',
+    error_message: `Errore dal sistema di prenotazione (${status}). Riprova tra qualche minuto.`
+  };
+}
+
+/**
  * Chiamata generica API OctoTable PMS.
  * Il property_id va nell'header "Property".
  */
@@ -151,8 +247,12 @@ async function api(method, path, body = null, query = {}, restaurantId = null) {
   }
 
   if (!res.ok) {
-    const msg = json?.message || json?.error_description || json?.error || text || res.statusText;
-    throw new Error(`OctoTable API ${method} ${path}: ${res.status} ${msg}`);
+    const mapped = mapOctoTableError(res.status, json, text, method, path);
+    const err = new Error(mapped.error_message);
+    err.status = res.status;
+    err.error_code = mapped.error_code;
+    err.error_message = mapped.error_message;
+    throw err;
   }
 
   return json;
@@ -367,8 +467,10 @@ async function createReservation({ restaurantId, day, time, people, name, phone,
       event_id: null
     };
   } catch (err) {
-    logger.error('octotable_create_error', { restaurant_id: restaurantId, message: err.message });
-    return { ok: false, error_code: 'CREATE_ERROR', error_message: err.message };
+    const code = err.error_code || 'CREATE_ERROR';
+    const msg = err.error_message || err.message;
+    logger.error('octotable_create_error', { restaurant_id: restaurantId, error_code: code, message: msg });
+    return { ok: false, error_code: code, error_message: msg };
   }
 }
 
@@ -417,8 +519,10 @@ async function listReservationsByPhone(restaurantId, phone) {
 
     return { ok: true, results };
   } catch (err) {
-    logger.error('octotable_list_phone_error', { restaurant_id: restaurantId, message: err.message });
-    return { ok: false, error_code: 'LIST_ERROR', error_message: err.message };
+    const code = err.error_code || 'LIST_ERROR';
+    const msg = err.error_message || err.message;
+    logger.error('octotable_list_phone_error', { restaurant_id: restaurantId, error_code: code, message: msg });
+    return { ok: false, error_code: code, error_message: msg };
   }
 }
 
@@ -458,8 +562,10 @@ async function listReservationsByDay(restaurantId, dayISO) {
 
     return { ok: true, results };
   } catch (err) {
-    logger.error('octotable_list_day_error', { restaurant_id: restaurantId, message: err.message });
-    return { ok: false, error_code: 'LIST_BY_DAY_ERROR', error_message: err.message };
+    const code = err.error_code || 'LIST_BY_DAY_ERROR';
+    const msg = err.error_message || err.message;
+    logger.error('octotable_list_day_error', { restaurant_id: restaurantId, error_code: code, message: msg });
+    return { ok: false, error_code: code, error_message: msg };
   }
 }
 
@@ -547,11 +653,10 @@ async function updateReservation(restaurantId, bookingId, fields) {
       notes: null
     };
   } catch (err) {
-    if (err.message.includes('404')) {
-      return { ok: false, error_code: 'BOOKING_NOT_FOUND', error_message: 'Prenotazione non trovata.' };
-    }
-    logger.error('octotable_update_error', { restaurant_id: restaurantId, booking_id: bookingId, message: err.message });
-    return { ok: false, error_code: 'UPDATE_ERROR', error_message: err.message };
+    const code = err.error_code || (err.message?.includes('404') ? 'BOOKING_NOT_FOUND' : 'UPDATE_ERROR');
+    const msg = err.error_message || err.message;
+    logger.error('octotable_update_error', { restaurant_id: restaurantId, booking_id: bookingId, error_code: code, message: msg });
+    return { ok: false, error_code: code, error_message: msg };
   }
 }
 
@@ -572,11 +677,10 @@ async function deleteReservation(restaurantId, bookingId) {
 
     return { ok: true, booking_id: bookingId, canceled: true };
   } catch (err) {
-    if (err.message.includes('404')) {
-      return { ok: false, error_code: 'BOOKING_NOT_FOUND', error_message: 'Prenotazione non trovata.' };
-    }
-    logger.error('octotable_delete_error', { restaurant_id: restaurantId, booking_id: bookingId, message: err.message });
-    return { ok: false, error_code: 'DELETE_ERROR', error_message: err.message };
+    const code = err.error_code || (err.message?.includes('404') ? 'BOOKING_NOT_FOUND' : 'DELETE_ERROR');
+    const msg = err.error_message || err.message;
+    logger.error('octotable_delete_error', { restaurant_id: restaurantId, booking_id: bookingId, error_code: code, message: msg });
+    return { ok: false, error_code: code, error_message: msg };
   }
 }
 
