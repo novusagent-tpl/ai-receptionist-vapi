@@ -79,10 +79,13 @@ module.exports = async function listBookings(req, res) {
       phone
     );
 
+const resultList = Array.isArray(result && result.results) ? result.results : [];
+
 logger.info('list_bookings_success', {
   restaurant_id,
   phone,
-  count: Array.isArray(result && result.bookings) ? result.bookings.length : 0,
+  count: resultList.length,
+  booking_ids: resultList.map(b => b.booking_id).slice(0, 5),
   source: isVapi ? 'vapi' : 'http',
   request_id: req.requestId || null,
 });
