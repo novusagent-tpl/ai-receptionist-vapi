@@ -92,6 +92,12 @@ function parseRelativeDay(textRaw) {
   const now = DateTime.now().setZone(ZONE).startOf('day');
 
   let text = normalizeText(textRaw);
+
+  // "stasera", "stamattina", "stanotte" → oggi
+  if (['stasera', 'stamattina', 'stanotte'].includes(text)) {
+    return { ok: true, date: now.toISODate(), ambiguous: false };
+  }
+
   text = removeDayParts(text);
   const tNoAcc = stripAccents(text);
 

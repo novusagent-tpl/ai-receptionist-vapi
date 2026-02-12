@@ -345,6 +345,7 @@ async function listReservationsByPhone(restaurantId, phone) {
     const results = list
       .filter(r => String(r.restaurantId || r.restaurant_id || '') === restId)
       .filter(r => !normPhone || normalizePhone(r.guest?.phone || r.phone || '') === normPhone)
+      .filter(r => !r.status || r.status.toLowerCase() !== 'canceled')
       .map(r => ({
         booking_id: r._id ?? r.id,
         day: r.date ?? r.day,
@@ -405,6 +406,7 @@ async function listReservationsByDay(restaurantId, dayISO) {
     const results = list
       .filter(r => String(r.restaurantId || r.restaurant_id || '') === restId)
       .filter(r => (r.date ?? r.day) === day)
+      .filter(r => !r.status || r.status.toLowerCase() !== 'canceled')
       .map(r => ({
         booking_id: r._id ?? r.id,
         day: r.date ?? r.day,

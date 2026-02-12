@@ -83,14 +83,18 @@ function buildDateTime(dayISO, hhmm, tz = 'Europe/Rome') {
 }
 
 function countActiveAt(dayISO, atTime, bookingTimes, avgStayMinutes, tz = 'Europe/Rome') {
-  const t = buildDateTime(dayISO, atTime, tz);
+  // Overlap bidirezionale: una nuova prenotazione a atTime con durata avgStayMinutes
+  // conflitterebbe con tutte le prenotazioni il cui intervallo si sovrappone.
+  const newStart = buildDateTime(dayISO, atTime, tz);
+  const newEnd = newStart.plus({ minutes: avgStayMinutes });
   let count = 0;
 
   for (const bt of bookingTimes) {
     if (!bt || typeof bt !== 'string' || !/^\d{2}:\d{2}$/.test(bt)) continue;
-    const start = buildDateTime(dayISO, bt, tz);
-    const end = start.plus({ minutes: avgStayMinutes });
-    if (start <= t && t < end) count++;
+    const existStart = buildDateTime(dayISO, bt, tz);
+    const existEnd = existStart.plus({ minutes: avgStayMinutes });
+    // Due intervalli [a,b) e [c,d) si sovrappongono se a < d AND c < b
+    if (existStart < newEnd && newStart < existEnd) count++;
   }
 
   return count;

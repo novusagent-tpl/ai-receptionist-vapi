@@ -40,9 +40,19 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:** 
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1. Abbiamo disponibilità per domani sera alle 20. Procediamo con la prenotazione. Mi conferma il numero di telefono da utilizzare?  - Cliente: Dal numero che chiamo.
+2.La prenotazione è stata confermata per domani. 12 febbraio. Alle 20 per 2 persone a nome Mario Rossi. Se bisogno di ulteriore assistenza non esiti a chiedere. Arrivederci.
 
-**Log tool chiamati:**
+**Log tool chiamati:** {"ts":"2026-02-11T12:46:15.298Z","level":"info","event":"api_request","request_id":"3b227bcd","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cbc-b874-7dd3-9811-60d5d6b6e7e1","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:46:15.301Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"3b227bcd","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T12:46:15.305Z","level":"info","event":"api_request","request_id":"04918468","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cbc-b874-7dd3-9811-60d5d6b6e7e1","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:46:15.305Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"04918468","text":"20","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-11T12:46:16.772Z","level":"info","event":"api_request","request_id":"0e12c696","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cbc-b874-7dd3-9811-60d5d6b6e7e1","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:46:17.056Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"0e12c696"}
+{"ts":"2026-02-11T12:46:17.057Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"20:00","available":true,"reason":null,"source":"vapi","request_id":"0e12c696"}
+{"ts":"2026-02-11T12:46:31.748Z","level":"info","event":"api_request","request_id":"44245295","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cbc-b874-7dd3-9811-60d5d6b6e7e1","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:46:32.333Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"DLq2fN8GTrCbHjetQ"}
+{"ts":"2026-02-11T12:46:32.333Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"20:00","people":2,"phone":"+39XXX...688","booking_id":"DLq2fN8GTrCbHjetQ","source":"vapi","request_id":"44245295"}
 
 ---
 
@@ -63,11 +73,19 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Tool attesi:** resolve_relative_day, check_openings, create_booking
 
-**Esito:**
+**Esito:** 
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Certamente. Per quando desidera effettuare la prenotazione, 2.Domani sarà il 12 febbraio. A che ora preferisce prenotare?; 3.Abbiamo disponibilità per domani alle 19.30. Quante persone saranno?  4.Perfetto, posso avere il suo nome per favore?; 5. Grazie Giulia. Infine userò il numero di telefono Plus 3 39 393 4 9 2 6 7 4 6 8. 9 8 per la prenotazione. Va bene?; 6.La prenotazione è confermata per domani 12 febbraio alle nineteen point 3 0 per 3 persone a nome Giulia Bianchi. Arrivederci e buona giornata.; 7.Prego buona giornata.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T12:53:08.041Z","level":"info","event":"api_request","request_id":"543db944","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cc2-fb25-7cc8-a030-fb230c5ea786","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:53:08.042Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"543db944","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T12:53:20.736Z","level":"info","event":"api_request","request_id":"70f3d56a","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cc2-fb25-7cc8-a030-fb230c5ea786","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T12:53:20.903Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"19:30","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"70f3d56a"}
+{"ts":"2026-02-11T12:53:20.903Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"19:30","available":true,"reason":null,"source":"vapi","request_id":"70f3d56a"}
+{"ts":"2026-02-11T12:53:56.921Z","level":"info","event":"api_request","request_id":"77d084e9","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cc2-fb25-7cc8-a030-fb230c5ea786","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+Menu
+{"ts":"2026-02-11T12:53:57.481Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"GAqQyLmSWWLRQEdgB"}
+{"ts":"2026-02-11T12:53:57.481Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"19:30","people":3,"phone":"+39XXX...688","booking_id":"GAqQyLmSWWLRQEdgB","source":"vapi","request_id":"77d084e9"}
 
 ---
 
@@ -83,9 +101,20 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Siamo aperti sabato prossimo 14 febbraio dalle 19 alle 23.30 e abbiamo disponibilità per le 21. Posso procedere con la prenotazione per 4 persone, mi conferma il suo nome e il numero di telefono? - Cliente: Mi chiamo Giulia; 2.Perfetto Giulia. E per il numero di telefono posso usare il numero da cui sta chiamando? - Cliente: Certo; 3.La prenotazione è confermata per sabato 14 febbraio alle 21 per 4 persone a nome Giulia. Se bisogno di ulteriore assistenza, non esiti a chiedere. Arrivederci. - Cliente: Va bene grazie 1000;
+4.Prego, buona giornata.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T13:07:28.445Z","level":"info","event":"api_request","request_id":"c570398c","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd0-28db-7ffe-93fb-1502ddd47208","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:07:28.446Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"c570398c","text":"sabato prossimo","date":"2026-02-14"}
+{"ts":"2026-02-11T13:07:28.457Z","level":"info","event":"api_request","request_id":"8dbf193a","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd0-28db-7ffe-93fb-1502ddd47208","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:07:28.457Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"8dbf193a","text":"21","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-11T13:07:31.004Z","level":"info","event":"api_request","request_id":"ec8ad02b","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd0-28db-7ffe-93fb-1502ddd47208","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:07:31.143Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-14","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"ec8ad02b"}
+{"ts":"2026-02-11T13:07:31.143Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-14","closed":false,"openings_count":10,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"ec8ad02b"}
+{"ts":"2026-02-11T13:08:06.558Z","level":"info","event":"api_request","request_id":"367d3022","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd0-28db-7ffe-93fb-1502ddd47208","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+Menu
+{"ts":"2026-02-11T13:08:07.170Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"jpRKssx95bJN9uArC"}
+{"ts":"2026-02-11T13:08:07.170Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-14","time":"21:00","people":4,"phone":"+39XXX...688","booking_id":"jpRKssx95bJN9uArC","source":"vapi","request_id":"367d3022"}
 
 ---
 
@@ -101,9 +130,17 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Siamo aperti a pranzo giovedì dalle 12.30 alle 14 :30. Per Luna abbiamo disponibilità Quante persone saranno?- Cliente: Saranno 2 persone.;
+2.La prenotazione è stata confermata per giovedì 12 febbraio alle 13 per 2 persone a nome Carla Neri. Prego, buona giornata.; ... 
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T13:13:49.277Z","level":"info","event":"api_request","request_id":"2ef18f6b","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd5-f6c6-7bb3-bd2c-e698b22af924","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:13:49.277Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"2ef18f6b","text":"giovedì","date":"2026-02-12"}
+{"ts":"2026-02-11T13:13:50.343Z","level":"info","event":"api_request","request_id":"bcd86a3c","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd5-f6c6-7bb3-bd2c-e698b22af924","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:13:50.501Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"13:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"bcd86a3c"}
+{"ts":"2026-02-11T13:13:50.501Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"13:00","available":true,"reason":null,"source":"vapi","request_id":"bcd86a3c"}
+{"ts":"2026-02-11T13:14:07.257Z","level":"info","event":"api_request","request_id":"8586789f","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cd5-f6c6-7bb3-bd2c-e698b22af924","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:14:07.859Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"wLy5NWaJcd3MjmJR4"}
+{"ts":"2026-02-11T13:14:07.859Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"13:00","people":2,"phone":"+39XXX...688","booking_id":"wLy5NWaJcd3MjmJR4","source":"vapi","request_id":"8586789f"}
 
 ---
 
@@ -121,9 +158,13 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** Mi dispiace, ma lunedì prossimo siamo chiusi. Vuole prenotare in un altro giorno?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T13:22:39.613Z","level":"info","event":"api_request","request_id":"19f45727","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cde-1a40-711d-9231-15e3d4138d27","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:22:39.614Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"19f45727","text":"lunedì prossimo","date":"2026-02-16"}
+{"ts":"2026-02-11T13:22:40.960Z","level":"info","event":"api_request","request_id":"12b75b1f","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cde-1a40-711d-9231-15e3d4138d27","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:22:41.087Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-16","requested_time":"20:00","in_openings":false,"slot_exists":false,"active_bookings_count":null,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"not_in_openings","nearest_slots_count":0,"source":"vapi","request_id":"12b75b1f"}
+{"ts":"2026-02-11T13:22:41.087Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-16","closed":true,"openings_count":0,"requested_time":"20:00","available":false,"reason":"not_in_openings","source":"vapi","request_id":"12b75b1f"}
 
 ---
 
@@ -139,10 +180,22 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Domani, 12 febbraio, siamo aperti a cena dalle 19 alle 22.30. Tuttavia, non accettiamo prenotazioni esattamente alle diciannove:venti. Posso proporle di prenotare alle 19 o alle diciannove:trenta. Va bene uno di questi orari?
 
-**Log tool chiamati:**
-
+**Log tool chiamati:**{"ts":"2026-02-11T13:27:06.346Z","level":"info","event":"api_request","request_id":"df931949","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ce2-2ce1-711d-9235-6d915dd478ae","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:27:06.347Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"df931949","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T13:27:06.562Z","level":"info","event":"api_request","request_id":"0c03895d","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ce2-2ce1-711d-9235-6d915dd478ae","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:27:06.563Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"0c03895d","text":"19.20","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-11T13:27:08.341Z","level":"info","event":"api_request","request_id":"46972a93","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ce2-2ce1-711d-9235-6d915dd478ae","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:27:08.513Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"19:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"46972a93"}
+{"ts":"2026-02-11T13:27:08.513Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"19:00","available":true,"reason":null,"source":"vapi","request_id":"46972a93"}
+{"ts":"2026-02-11T13:27:47.698Z","level":"info","event":"api_request","request_id":"411512f4","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ce2-2ce1-711d-9235-6d915dd478ae","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:27:47.833Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":2,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"411512f4"}
+{"ts":"2026-02-11T13:27:47.833Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"20:00","available":true,"reason":null,"source":"vapi","request_id":"411512f4"}
+{"ts":"2026-02-11T13:28:18.574Z","level":"info","event":"api_request","request_id":"9cb77a51","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ce2-2ce1-711d-9235-6d915dd478ae","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+Menu
+{"ts":"2026-02-11T13:28:19.187Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"QuCeiW4gYgs3qbYbE"}
+{"ts":"2026-02-11T13:28:19.187Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"20:00","people":2,"phone":"+39XXX...310","booking_id":"QuCeiW4gYgs3qbYbE","source":"vapi","request_id":"9cb77a51"}
 ---
 
 ### B3. Orario ambiguo ("alle 10")
@@ -157,9 +210,13 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**Intende alle 10 del mattino o alle 22 di sera?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T13:37:34.735Z","level":"info","event":"api_request","request_id":"ed4912d1","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ceb-a446-7bb3-bd40-ef9428b75d66","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:37:34.735Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"ed4912d1","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T13:37:35.981Z","level":"info","event":"api_request","request_id":"7b8a9e7f","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4ceb-a446-7bb3-bd40-ef9428b75d66","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:37:36.107Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"22:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"7b8a9e7f"}
+{"ts":"2026-02-11T13:37:36.107Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"22:00","available":true,"reason":null,"source":"vapi","request_id":"7b8a9e7f"}
 
 ---
 
@@ -175,9 +232,20 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Per venerdì 13 febbraio alle 20 abbiamo disponibilità Posso procedere con la prenotazione per 6 per persone a nome Andrea Verdi. Conferma per favore? - Cliente: va bene.; 2.Purtroppo il numero massimo di persone per prenotazione è 4. Posso aiutarla a prenotare per 4 persone. Oppure desidera modificare il numero di partecipanti. - Cliente: Va bene, facciamo per 4 persone.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T13:43:12.376Z","level":"info","event":"api_request","request_id":"5794ca2e","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf0-df06-7337-bba9-c1640f490cfb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:43:12.376Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"5794ca2e","text":"venerdì","date":"2026-02-13"}
+{"ts":"2026-02-11T13:43:12.385Z","level":"info","event":"api_request","request_id":"ce681d0b","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf0-df06-7337-bba9-c1640f490cfb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:43:12.385Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"ce681d0b","text":"20","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+Menu
+{"ts":"2026-02-11T13:43:13.873Z","level":"info","event":"api_request","request_id":"b73bb856","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf0-df06-7337-bba9-c1640f490cfb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:43:13.996Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-13","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"b73bb856"}
+{"ts":"2026-02-11T13:43:13.996Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-13","closed":false,"openings_count":17,"requested_time":"20:00","available":true,"reason":null,"source":"vapi","request_id":"b73bb856"}
+{"ts":"2026-02-11T13:43:31.220Z","level":"info","event":"api_request","request_id":"f2aea490","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf0-df06-7337-bba9-c1640f490cfb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:43:51.430Z","level":"info","event":"api_request","request_id":"5d4b53c6","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf0-df06-7337-bba9-c1640f490cfb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:43:51.982Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"6w92amCf9eQSKewYE"}
+{"ts":"2026-02-11T13:43:51.982Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-13","time":"20:00","people":4,"phone":"+39XXX...688","booking_id":"6w92amCf9eQSKewYE","source":"vapi","request_id":"5d4b53c6"}
 
 ---
 
@@ -187,15 +255,33 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Obiettivo:** Usare un giorno/orario con max_concurrent_bookings già raggiunto (creare prima N prenotazioni via Postman se necessario). Receptionist deve proporre nearest_slots e NON chiamare create_booking.
 
-**Cliente dice:** "Vorrei prenotare per [giorno con slot pieno] alle 20 per 2 persone."
+**Cliente dice:** "Vorrei prenotare per [il 12] alle 20 per 2 persone."
 
 **Tool attesi:** check_openings (available=false, reason=full), NO create_booking
 
-**Esito:**
+**Esito:** Qui ho osservato una cosa, prima avevvo fatto un test dicendo 12 febbreio non solo 12 e non mi piace perché chiede il anno, non deve mai parlare del anno e non dirlo ai clienti, è ovvio che siamo nel 2026, deve sapere che quando si parla di una data prende sempre l'anno corrente che è il 2026 perché se parla del anno va in tilt e inizia a dire in inglese il anno.
 
-**Risposte receptionist:**
+**Risposte receptionist:**Per il 12 febbraio alle 20 non abbiamo disponibilità. Poiché siamo al completo. Posso proporle alcuni orari alternativi di diciannove:trenta o 21. Va bene uno di questi?
 
-**Log tool chiamati:**
+*Inoltre qui ha proposto le 19:30 anche se alle 20 erano tutti li tavoli occupati per un'ora, quindi poi mi ha detto che è occupato ma comunque ho detto che voglio alle 19:00 e anche se era libero mi ha detto che non ci sono tavoli.
+
+**Log tool chiamati:**{"ts":"2026-02-11T13:51:55.354Z","level":"info","event":"api_request","request_id":"f6b8bea6","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:51:55.355Z","level":"error","event":"resolve_relative_day_error","restaurant_id":"modena01","source":"vapi","request_id":"f6b8bea6","text":"12 febbraio","message":"Espressione giorno non riconosciuta. Usa domani/dopodomani/lunedì/tra X giorni oppure indica una data (YYYY-MM-DD)."}
+{"ts":"2026-02-11T13:51:55.375Z","level":"info","event":"api_request","request_id":"713cc4d8","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:51:55.528Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":5,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"full","nearest_slots_count":3,"source":"vapi","request_id":"713cc4d8"}
+{"ts":"2026-02-11T13:51:55.528Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"20:00","available":false,"reason":"full","source":"vapi","request_id":"713cc4d8"}
+{"ts":"2026-02-11T13:52:37.062Z","level":"info","event":"api_request","request_id":"009f9105","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:52:37.400Z","level":"error","event":"resos_create_error","restaurant_id":"modena01","message":"resOS API POST /bookings: 422 no suitable table found [bookings.insert: no suitable table found]"}
+{"ts":"2026-02-11T13:52:37.400Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"19:30","people":2,"phone":"+39XXX...688","source":"vapi","request_id":"009f9105"}
+{"ts":"2026-02-11T13:52:51.871Z","level":"info","event":"api_request","request_id":"e4c5a3f8","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:52:52.009Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"19:00","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"e4c5a3f8"}
+{"ts":"2026-02-11T13:52:52.009Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"19:00","available":true,"reason":null,"source":"vapi","request_id":"e4c5a3f8"}
+{"ts":"2026-02-11T13:53:07.876Z","level":"info","event":"api_request","request_id":"ac649617","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:53:08.199Z","level":"error","event":"resos_create_error","restaurant_id":"modena01","message":"resOS API POST /bookings: 422 no suitable table found [bookings.insert: no suitable table found]"}
+{"ts":"2026-02-11T13:53:08.199Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"19:00","people":2,"phone":"+39XXX...688","source":"vapi","request_id":"ac649617"}
+{"ts":"2026-02-11T13:53:28.100Z","level":"info","event":"api_request","request_id":"84476c21","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4cf8-e13a-7442-85ab-b395ae1105f2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T13:53:28.656Z","level":"info","event":"resos_create_reservation","restaurant_id":"modena01","resos_restaurant_id":"JLAs2CviunNCSEfbt","reservation_id":"rJjreGwWjQC3z9kbW"}
+{"ts":"2026-02-11T13:53:28.656Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"21:00","people":2,"phone":"+39XXX...688","booking_id":"rJjreGwWjQC3z9kbW","source":"vapi","request_id":"84476c21"}
 
 ---
 
@@ -205,7 +291,7 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Precondizione:** Esiste già una prenotazione per quel telefono, giorno e orario (creata prima via Postman o chiamata precedente).
 
-**Cliente dice:** "Vorrei prenotare per domani alle 20 per 2 persone, Mario Rossi." [stessi dati di prenotazione già esistente]
+**Cliente dice:** "Vorrei prenotare per domani alle 21 per 2 persone, Carla." [stessi dati di prenotazione già esistente]
 
 **Obiettivo:** Backend restituisce DUPLICATE_BOOKING. Receptionist deve comunicare che esiste già una prenotazione e proporre di modificarla o controllare.
 
@@ -213,9 +299,22 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.L'orario che mi indicato non è riconosciuto. Puoi indicarmi l'orario esatto? Ad esempio, 21.- Cliente:Sì, alle 21.
+2.Siamo aperti domani. 12 febbraio dalle 19 alle 22.30 e abbiamo disponibilità per le 21 Posso procedere con la prenotazione per 2 persone.
+3.Perfetto, posso avere il numero di telefono per completare la prenotazione a nome di Carla?
+4.Risulta già una prenotazione per domani 12 febbraio alle 21 a nome di Carla. Vuole modificare questa prenotazione o verificare I dettagli dettagli?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T14:02:47.034Z","level":"info","event":"api_request","request_id":"7e9e40ad","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d02-d1d4-7ee0-9f76-5cb02cb8a8dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:02:47.034Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"7e9e40ad","text":"21","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-11T14:02:47.038Z","level":"info","event":"api_request","request_id":"e710bf0e","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d02-d1d4-7ee0-9f76-5cb02cb8a8dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:02:47.038Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"e710bf0e","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T14:03:02.950Z","level":"info","event":"api_request","request_id":"1c844de0","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d02-d1d4-7ee0-9f76-5cb02cb8a8dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:03:03.105Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":1,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"1c844de0"}
+{"ts":"2026-02-11T14:03:03.105Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"1c844de0"}
+{"ts":"2026-02-11T14:03:36.354Z","level":"info","event":"api_request","request_id":"e377256a","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d02-d1d4-7ee0-9f76-5cb02cb8a8dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:03:36.473Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"21:00","people":2,"phone":"+39XXX...688","source":"vapi","request_id":"e377256a"}
+{"ts":"2026-02-11T14:03:37.501Z","level":"info","event":"api_request","request_id":"eed7e275","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d02-d1d4-7ee0-9f76-5cb02cb8a8dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:03:37.608Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"eed7e275"}
 
 ---
 
@@ -231,11 +330,13 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Tool attesi:** list_bookings
 
-**Esito:**
+**Esito:** Qui non deve dire l'anno perché lo legge in inglese, la cosa migliore e evitare che legga il anno.
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1.Posso chiederle il numero di telefono utilizzato per la prenotazione
+2.Alle seguenti prenotazioni, 12 febbraio 2026 alle 20 per 2 persone a nome, Mario Rossi, 12 febbraio 2126 alle 21 per 2 persone a nome Carla. 13 febbraio 2126 alle 20 per 4 persone a nome Andrea Verdi 14 febbraio 2126 alle....
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T14:06:35.585Z","level":"info","event":"api_request","request_id":"09e124ca","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d06-2220-7442-85c4-b57fd30e766b","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:06:35.725Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"09e124ca"}
 
 ---
 
@@ -251,9 +352,12 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso controllare la sua prenotazione. Potrebbe gentilmente fornirmi il numero di telefono telefono utilizzato per la prenotazione. - Cliente: Certo il numero è uno 2 2 3 6 5 uno 2 3 2.
+2.Non trovo prenotazioni con questo numero. Potrebbe confermarmi il numero utilizzato o indicarmi il giorno della prenotazione? - Cliente: Sì, il giorno è sabato.
+3.Non riesco a trovare una prenotazione per sabato con il numero fornito. Potrebbe dirmi se utilizzato un altro numero di telefono per la prenotazione...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T14:09:52.911Z","level":"info","event":"api_request","request_id":"f52eb590","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d09-12a6-7554-bd4e-2fd61e4c1598","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:09:53.110Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...123","count":0,"source":"vapi","request_id":"f52eb590"}
 
 ---
 
@@ -269,11 +373,13 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Tool attesi:** list_bookings
 
-**Esito:**
+**Esito:** Qui non so perché ma non ha detto l'anno quini va bene, quando non dice l'anno va tutto bene e funziona bene
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso aiutarla con questo? Potrebbe gentilmente fornirmi il numero di telefono utilizzato per la prenotazione.
+2.Ho trovato 4 prenotazioni con il numero fornito. Uno 12 febbraio alle 20 per 2 persone a nome. Mario Rossi. 2, 12 febbraio alle 21 per 2 persone a nome Carla. 3....
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T14:13:56.155Z","level":"info","event":"api_request","request_id":"aa64b252","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d0c-c9d1-777e-9051-7a061bdec73f","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T14:13:56.294Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"aa64b252"}
 
 ---
 
@@ -293,9 +399,19 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso aiutarla con questo. Prima, mi può fornire il numero di telefono con cui effettuato la prenotazione.
+2.Ho trovato 2 prenotazioni con il numero fornito. Uno Carla Neri. Domani 12 febbraio alle 13 per 2 persone. 2 Giulia Bianchi, domani 12 febbraio alle 19.30 per 3 persone. Quale di queste prenotazioni desidera modificare?
+3.La sua prenotazione per domani 12 febbraio, è stata spostata alle 21. Se bisogno di ulteriore assistenza, non esiti a chiedere. Buona giornata.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T15:00:41.187Z","level":"info","event":"api_request","request_id":"2334721f","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d37-2c82-7cc8-a0c2-c08e2be6cd0d","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T15:00:41.445Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...680","count":0,"source":"vapi","request_id":"2334721f"}
+{"ts":"2026-02-11T15:01:14.219Z","level":"info","event":"api_request","request_id":"c88ca9cb","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d37-2c82-7cc8-a0c2-c08e2be6cd0d","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T15:01:14.577Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":1,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"c88ca9cb"}
+{"ts":"2026-02-11T15:01:14.577Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"c88ca9cb"}
+{"ts":"2026-02-11T15:01:15.994Z","level":"info","event":"api_request","request_id":"c4107c7f","method":"POST","path":"/api/modify_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d37-2c82-7cc8-a0c2-c08e2be6cd0d","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+Menu
+{"ts":"2026-02-11T15:01:16.231Z","level":"info","event":"resos_update_reservation","restaurant_id":"modena01","booking_id":"GAqQyLmSWWLRQEdgB"}
+{"ts":"2026-02-11T15:01:16.231Z","level":"info","event":"modify_booking_success","restaurant_id":"modena01","booking_id":"GAqQyLmSWWLRQEdgB","source":"vapi","request_id":"c4107c7f"}
 
 ---
 
@@ -309,11 +425,21 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Tool attesi:** list_bookings, modify_booking
 
-**Esito:**
+**Esito:** 
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Per aiutarla a modificare la prenotazione, potrei avere il numero di telefono con cui effettuato la prenotazione
+2.Con questo numero risultano 3 prenotazioni future. Il 12 febbraio alle 21 il 13 febbraio alle 20, e il 14 febbraio alle 21. Quale di queste?....
+3. Poi ho detto qualle e mi ha detto che va bene e ha cambiato a 4 persone.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T15:10:43.660Z","level":"info","event":"api_request","request_id":"df8e50ad","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d40-aedf-711d-92c5-88e31bc4b4a2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T15:10:43.793Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"df8e50ad"}
+{"ts":"2026-02-11T15:10:47.390Z","level":"info","event":"api_request","request_id":"e4398a23","method":"POST","path":"/api/modify_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d40-aedf-711d-92c5-88e31bc4b4a2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T15:10:47.639Z","level":"info","event":"resos_update_reservation","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW"}
+{"ts":"2026-02-11T15:10:47.639Z","level":"info","event":"modify_booking_success","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW","source":"vapi","request_id":"e4398a23"}
+{"ts":"2026-02-11T15:11:07.777Z","level":"info","event":"api_request","request_id":"ce1c6753","method":"POST","path":"/api/modify_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4d40-aedf-711d-92c5-88e31bc4b4a2","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T15:11:08.041Z","level":"info","event":"resos_update_reservation","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW"}
+Menu
+{"ts":"2026-02-11T15:11:08.041Z","level":"info","event":"modify_booking_success","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW","source":"vapi","request_id":"ce1c6753"}
 
 ---
 
@@ -329,9 +455,18 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:** 1. Per spostare la prenotazione a domenica alle 20, devo prima individuare la sua prenotazione attuale. Potrebbe dirmi il numero di telefono usato per la prenotazione? 
+2.Con questo numero, risultano 3 prenotazioni future, il 12 febbraio alle 21 il 13 febbraio alle 20 e il 14 febbraio alle 21. Quale di queste prenotazioni desidera spostare spostare a domenica alle 20?
+3.La prenotazione di sabato è il 4 14 febbraio alle ventuno:zero, giusto? Conferma?
+4.Domenica 15 febbraio il ristorante è chiuso, quindi non è possibile spostare la prenotazione a quella data. Vuole scegliere un altro giorno?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-11T17:32:32.278Z","level":"info","event":"api_request","request_id":"03da0e3f","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dc2-7fad-788f-9970-c145e8695cdc","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:32:32.531Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"03da0e3f"}
+{"ts":"2026-02-11T17:33:03.657Z","level":"info","event":"api_request","request_id":"27307d2d","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dc2-7fad-788f-9970-c145e8695cdc","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:33:03.657Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"27307d2d","text":"domenica","date":"2026-02-15"}
+{"ts":"2026-02-11T17:33:04.915Z","level":"info","event":"api_request","request_id":"63d6c07c","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dc2-7fad-788f-9970-c145e8695cdc","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:33:05.055Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-15","requested_time":"20:00","in_openings":false,"slot_exists":false,"active_bookings_count":null,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"not_in_openings","nearest_slots_count":0,"source":"vapi","request_id":"63d6c07c"}
+{"ts":"2026-02-11T17:33:05.055Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-15","closed":true,"openings_count":0,"requested_time":"20:00","available":false,"reason":"not_in_openings","source":"vapi","request_id":"63d6c07c"}
 
 ---
 
@@ -351,9 +486,17 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Per cancellare la sua prenotazione prenotazione potrai avere il numero di telefono con cui hai effettuato la prenotazione o la data e l'orario esatti della prenotazione da cancellare,;  2.Ho trovato più prenotazioni con il suo numero. Per favore, mi conferma se vuole cancellare la prenotazione per il 12 febbraio alle 21 con nome Carla.;
+3.La prenotazione per il 12 febbraio alle 21 con nome Carla è stata cancellata. Posso aiutarla in altro?
 
-**Log tool chiamati:**
+
+**Log tool chiamati:**{"ts":"2026-02-11T17:43:13.077Z","level":"info","event":"api_request","request_id":"3075e755","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dcc-5c4d-7bbb-b3f4-351cedb80e7e","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:43:13.078Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"3075e755","text":"domani","date":"2026-02-12"}
+{"ts":"2026-02-11T17:43:14.319Z","level":"info","event":"api_request","request_id":"ccb74010","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dcc-5c4d-7bbb-b3f4-351cedb80e7e","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:43:14.558Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"ccb74010"}
+{"ts":"2026-02-11T17:43:29.337Z","level":"info","event":"api_request","request_id":"a9c53dd9","method":"POST","path":"/api/cancel_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4dcc-5c4d-7bbb-b3f4-351cedb80e7e","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T17:43:29.689Z","level":"info","event":"resos_delete_reservation","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW"}
+{"ts":"2026-02-11T17:43:29.690Z","level":"info","event":"cancel_booking_success","restaurant_id":"modena01","booking_id":"rJjreGwWjQC3z9kbW","source":"vapi","request_id":"a9c53dd9"}
 
 ---
 
@@ -371,9 +514,18 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Per annullare la prenotazione potrei avere il numero di telefono con cui è stata fatta la prenotazione, Se preferisce può darmi anche il giorno della prenotazione.;
+2.Ho trovato 2 prenotazioni con quel numero. Una per il 12 febbraio alle 13.30 e una per il 12 febbraio alle 20. Quale delle 2 desidera cancellare?
+3.La prenotazione per il 12 febbraio alle 20 è stata cancellata. Posso aiutarla in altro?
 
-**Log tool chiamati:**
+
+**Log tool chiamati:**{"ts":"2026-02-11T19:23:30.578Z","level":"info","event":"api_request","request_id":"6cfb36e8","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4e27-b8ef-7000-802c-948b2de03eeb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T19:23:31.021Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...310","count":0,"source":"vapi","request_id":"6cfb36e8"}
+{"ts":"2026-02-11T19:23:32.590Z","level":"info","event":"api_request","request_id":"35dec2bd","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4e27-b8ef-7000-802c-948b2de03eeb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T19:23:32.689Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...310","count":0,"source":"vapi","request_id":"35dec2bd"}
+{"ts":"2026-02-11T19:23:52.229Z","level":"info","event":"api_request","request_id":"74f5415f","method":"POST","path":"/api/cancel_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c4e27-b8ef-7000-802c-948b2de03eeb","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-11T19:23:52.887Z","level":"info","event":"resos_delete_reservation","restaurant_id":"modena01","booking_id":"QuCeiW4gYgs3qbYbE"}
+{"ts":"2026-02-11T19:23:52.887Z","level":"info","event":"cancel_booking_success","restaurant_id":"modena01","booking_id":"QuCeiW4gYgs3qbYbE","source":"vapi","request_id":"74f5415f"}
 
 ---
 
@@ -381,7 +533,7 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Ristorante:** modena01
 
-**Cliente dice:** "Vorrei cancellare la prenotazione di stasera." [nessuna prenotazione per quel telefono]
+**Cliente dice:** "Vorrei cancellare la prenotazione del 17." [nessuna prenotazione per quel telefono]
 
 **Obiettivo:** list_bookings → count=0. Receptionist dice che non ci sono prenotazioni; può chiedere se ha usato altro numero.
 
@@ -389,9 +541,11 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Per favore, mi puoi indicare il numero di telefono con cui effettuato la prenotazione o confermare la data esatta e l'orario della prenotazione del diciasette;
+2.Con questo numero risultano prenotazioni per il 12 13.14 febbraio, ma nessuna per il diciasette. Può confermarmi il giorno e l'orario esatti della prenotazione che desidera cancellare;...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T14:27:30.433Z","level":"info","event":"api_request","request_id":"2a5c0d34","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c523f-83dc-7003-8bd0-a81653d79f3f","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T14:27:30.569Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"2a5c0d34"}
 
 ---
 
@@ -409,9 +563,9 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Sì, abbiamo un parcheggio privato gratuito dove potete parcheggiare le macchine. Posso aiutarla con qualcos'altro?
 
-**Log tool chiamati:**
+**Log tool chiamati:**HA chiamato usano il tool di vapi per il file che abbiamo inserito dentro vapi, quindi va bene. In questi casi non deve più usare il tool che avevvamo fatto noi per le faq, giusto?
 
 ---
 
@@ -427,9 +581,9 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Sì, abbiamo alcune opzioni senza glutine adatte a chi è celiaco. Le consiglio di chiedere al cameriere quando arriva per maggiori dettagli. Posso aiutarla con qualcos'altro?
 
-**Log tool chiamati:**
+**Log tool chiamati:**Funziona
 
 ---
 
@@ -445,9 +599,9 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Nel ristorante non sono ammessi animali, compresi I cani. Posso aiutarla con qualcos'altro?
 
-**Log tool chiamati:**
+**Log tool chiamati:**Funziona
 
 ---
 
@@ -463,9 +617,9 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Non ho questa informazione disponibile. Può contattare direttamente il ristorante per verificare. Posso aiutarla in altro.
 
-**Log tool chiamati:**
+**Log tool chiamati:**Funziona
 
 ---
 
@@ -481,11 +635,12 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Tool attesi:** is_open_now e/o check_openings
 
-**Esito:**
+**Esito:**Va bene
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Il ristorante è chiuso in questo momento, Riapre alle 19. Posso aiutarla io?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T14:36:33.207Z","level":"info","event":"api_request","request_id":"7c844764","method":"POST","path":"/api/is_open_now","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5248-210e-7663-97dd-574ef3b630de","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T14:36:33.207Z","level":"info","event":"is_open_now","restaurant_id":"modena01","aperto_ora":false,"prossima_apertura":"19:00"}
 
 ---
 
@@ -501,9 +656,12 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**Siamo aperti a pranzo dalle 12 alle 15 e a cena dalle 19 alle 23.30. Vuole sapere gli orari di un giorno diverso, o preferisce un orario specifico?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T14:39:01.478Z","level":"info","event":"api_request","request_id":"cb983156","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c524a-3d27-7cce-9d12-7d5d96e11c02","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T14:39:01.480Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"cb983156","text":"domani","date":"2026-02-13"}
+{"ts":"2026-02-12T14:39:02.646Z","level":"info","event":"api_request","request_id":"52adba23","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c524a-3d27-7cce-9d12-7d5d96e11c02","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T14:39:02.651Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-13","closed":false,"openings_count":17,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"52adba23"}
 
 ---
 
@@ -519,9 +677,9 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Il ristorante è chiuso lunedì 16 febbraio. Posso aiutarla con qualcos'altro?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T15:08:06.906Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-16","closed":true,"openings_count":0,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"8f3bb97f"}
 
 ---
 
@@ -533,15 +691,21 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Obiettivo:** Se check_openings passa ma create_booking restituisce NO_TABLE_AVAILABLE (race condition o capacity diversa resOS vs KB), receptionist deve comunicare e proporre altro orario senza panico.
 
-**Cliente dice:** [Flow prenotazione che arriva a create_booking; backend restituisce NO_TABLE_AVAILABLE]
+**Cliente dice:** Salve vorrei prenotare per stasera. [Flow prenotazione che arriva a create_booking; backend restituisce NO_TABLE_AVAILABLE] 
 
 **Tool attesi:** check_openings, create_booking (errore NO_TABLE_AVAILABLE)
 
-**Esito:**
+**Esito:**Qui diciamo che la conversazione non è stata cosi pulita, inoltre ha detto l'anno in inglese che seconod me non serve dire l'anno inoltre come facciamo a risolvere questo rpoblema che per esempio in questo caso dalle 20 alle 21 tutti i tavoli erano prenotati, ma lui come orario consiglia le 19:30 però li e libero solo per mezz'ora ma le prenotazioni durano da 60 min>, quindi come risolviamo e quale l'opzione migliore, si puo fare nel backend aggiungendo/modificando qualcosa cosi non succede mai più e si risolve. E visto che mi consiglia gli orari disponibili più vicini e dico le 19 e 30 mi chiede i dettagli della prenotazione e poi mi dice che nemmeno alle 19 e 30 non è disponibile, quindi in realtà risponde bene però c'è un modo di fare per risolvere questa cosa?
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Per favore, mi indica il numero di persone per la prenotazione?;  2.A che ora preferisce prenotare per stasera?;   3.Mi scusi, per stasera intende oggi 12 febbraio 2026 Me lo conferma per favore?;   4.Sì, l'ascolto. Per la prenotazione a che ora preferisce? -Cliente: Alle 20  5.A quell'ora non abbiamo disponibilità posso proporle alcuni orari diciannove:trenta, 19 o 21? Va bene uno di questi?
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T15:10:16.049Z","level":"info","event":"api_request","request_id":"21694a36","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5266-8adf-711d-98ab-d89302e798dd","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:10:16.050Z","level":"error","event":"resolve_relative_day_error","restaurant_id":"modena01","source":"vapi","request_id":"21694a36","text":"stasera","message":"Espressione giorno non riconosciuta. Usa domani/dopodomani/lunedì/tra X giorni oppure indica una data (YYYY-MM-DD)."}
+{"ts":"2026-02-12T15:14:19.683Z","level":"info","event":"api_request","request_id":"c8eca663","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c526a-7941-7663-981b-8a9aa3634d38","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:14:19.683Z","level":"error","event":"resolve_relative_day_error","restaurant_id":"modena01","source":"vapi","request_id":"c8eca663","text":"stasera","message":"Espressione giorno non riconosciuta. Usa domani/dopodomani/lunedì/tra X giorni oppure indica una data (YYYY-MM-DD)."}
+{"ts":"2026-02-12T15:14:56.917Z","level":"info","event":"api_request","request_id":"71110f09","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c526a-7941-7663-981b-8a9aa3634d38","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:14:57.471Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":6,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"full","nearest_slots_count":3,"source":"vapi","request_id":"71110f09"}
+{"ts":"2026-02-12T15:14:57.471Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"20:00","available":false,"reason":"full","source":"vapi","request_id":"71110f09"}
 
 ---
 
@@ -549,7 +713,7 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Ristorante:** modena01
 
-**Cliente dice:** "Non avete le 19:30? Va bene allora." [Receptionist aveva proposto 19:00 o 21:00]
+**Cliente dice:** "Non avete le 20:00? Va bene allora." [Receptionist aveva proposto 19:00 o 21:00]
 
 **Obiettivo:** Receptionist NON deve assumere il primo slot. Deve chiedere "Preferisce alle 19 o alle 21?" e procedere solo dopo scelta esplicita.
 
@@ -557,9 +721,15 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**Si funziona, se dico cosi: "Non avete le 20:00? Va bene allora. poi mi ha consigliato i orari più vicini in cui c'è posto. Però controlla cnhe tu per sicurazza i log
 
 **Log tool chiamati:**
+{"ts":"2026-02-12T15:37:45.031Z","level":"info","event":"api_request","request_id":"3399e7ad","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5280-06e0-7ff9-a934-947b41e0d518","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:37:45.448Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-12","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":6,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"full","nearest_slots_count":3,"source":"vapi","request_id":"3399e7ad"}
+{"ts":"2026-02-12T15:37:45.448Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-12","closed":false,"openings_count":13,"requested_time":"20:00","available":false,"reason":"full","source":"vapi","request_id":"3399e7ad"}
+{"ts":"2026-02-12T15:38:30.269Z","level":"info","event":"api_request","request_id":"3e064e1b","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5280-06e0-7ff9-a934-947b41e0d518","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:38:30.593Z","level":"error","event":"resos_create_error","restaurant_id":"modena01","message":"resOS API POST /bookings: 422 no suitable table found [bookings.insert: no suitable table found]"}
+{"ts":"2026-02-12T15:38:30.593Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-12","time":"19:30","people":3,"phone":"+39XXX...688","source":"vapi","request_id":"3e064e1b"}
 
 ---
 
@@ -575,9 +745,20 @@ Guida per testare la receptionist AI tramite **chiamate vocali reali** su Vapi. 
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**Durante la chiamat ha risposto in modo coretto e giusto
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-12T15:45:03.781Z","level":"info","event":"api_request","request_id":"4c2bb78d","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5286-a1af-7442-8c14-8284524634e5","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:45:03.783Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"modena01","source":"vapi","request_id":"4c2bb78d","text":"sabato","date":"2026-02-14"}
+{"ts":"2026-02-12T15:45:03.797Z","level":"info","event":"api_request","request_id":"11fc6e57","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5286-a1af-7442-8c14-8284524634e5","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:45:03.799Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"modena01","source":"vapi","request_id":"11fc6e57","text":"21","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-12T15:45:19.658Z","level":"info","event":"api_request","request_id":"c709753a","method":"POST","path":"/api/check_openings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5286-a1af-7442-8c14-8284524634e5","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:45:19.866Z","level":"info","event":"capacity_check_success","restaurant_id":"modena01","day":"2026-02-14","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":1,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"c709753a"}
+{"ts":"2026-02-12T15:45:19.866Z","level":"info","event":"check_openings_success","restaurant_id":"modena01","day":"2026-02-14","closed":false,"openings_count":10,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"c709753a"}
+{"ts":"2026-02-12T15:45:40.092Z","level":"info","event":"api_request","request_id":"af99524b","method":"POST","path":"/api/create_booking","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5286-a1af-7442-8c14-8284524634e5","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+{"ts":"2026-02-12T15:45:40.242Z","level":"info","event":"create_booking_success","restaurant_id":"modena01","day":"2026-02-14","time":"21:00","people":4,"phone":"+39XXX...688","source":"vapi","request_id":"af99524b"}
+{"ts":"2026-02-12T15:45:41.470Z","level":"info","event":"api_request","request_id":"9d686b12","method":"POST","path":"/api/list_bookings","restaurant_id":"modena01","backend_used":"resos","prompt_version":"v1.0","call_id":"019c5286-a1af-7442-8c14-8284524634e5","conversation_id":"930b1bfd-2e4d-479d-9c32-0276fb098834"}
+Menu
+{"ts":"2026-02-12T15:45:41.575Z","level":"info","event":"list_bookings_success","restaurant_id":"modena01","phone":"+39XXX...688","count":0,"source":"vapi","request_id":"9d686b12"}
 
 ---
 
