@@ -341,11 +341,35 @@ async function listReservationsByPhone(restaurantId, phone) {
     const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime }, restaurantId);
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
+    // Log diagnostico: mostra i campi relativi allo status delle prime 5 prenotazioni
+    if (list.length > 0) {
+      const sample = list.slice(0, 5).map(r => ({
+        id: r._id ?? r.id,
+        status: r.status,
+        canceledAt: r.canceledAt,
+        canceled_at: r.canceled_at,
+        state: r.state,
+        deleted: r.deleted,
+      }));
+      logger.info('resos_list_phone_raw_status', {
+        restaurant_id: restaurantId,
+        sample_count: sample.length,
+        sample,
+      });
+    }
+
     const now = DateTime.now().setZone(tz);
     const results = list
       .filter(r => String(r.restaurantId || r.restaurant_id || '') === restId)
       .filter(r => !normPhone || normalizePhone(r.guest?.phone || r.phone || '') === normPhone)
-      .filter(r => !r.status || r.status.toLowerCase() !== 'canceled')
+      .filter(r => {
+        // Filtro robusto: esclude prenotazioni cancellate (controlla più campi possibili)
+        const st = (r.status || '').toLowerCase();
+        if (st === 'canceled' || st === 'cancelled') return false;
+        if (r.canceledAt || r.canceled_at) return false;
+        if (r.deleted === true) return false;
+        return true;
+      })
       .map(r => ({
         booking_id: r._id ?? r.id,
         day: r.date ?? r.day,
@@ -406,7 +430,13 @@ async function listReservationsByDay(restaurantId, dayISO) {
     const results = list
       .filter(r => String(r.restaurantId || r.restaurant_id || '') === restId)
       .filter(r => (r.date ?? r.day) === day)
-      .filter(r => !r.status || r.status.toLowerCase() !== 'canceled')
+      .filter(r => {
+        const st = (r.status || '').toLowerCase();
+        if (st === 'canceled' || st === 'cancelled') return false;
+        if (r.canceledAt || r.canceled_at) return false;
+        if (r.deleted === true) return false;
+        return true;
+      })
       .map(r => ({
         booking_id: r._id ?? r.id,
         day: r.date ?? r.day,
