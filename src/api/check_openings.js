@@ -2,6 +2,7 @@ const kb = require('../kb');
 const timeUtils = require('../time-utils');
 const logger = require('../logger');
 const reservations = require('../reservations');
+const { getRestaurantConfig } = require('../config/restaurants');
 const { DateTime } = require('luxon');
 
 /* =========================
@@ -426,6 +427,13 @@ dayISO = dayStr;
       request_id: req.requestId || null,
     });
 
+    // --- max_people dal config ristorante ---
+    let maxPeople = null;
+    try {
+      const restCfg = getRestaurantConfig(restaurantId);
+      maxPeople = restCfg && restCfg.max_people ? Number(restCfg.max_people) : null;
+    } catch { /* ignore */ }
+
     // --- RISPOSTA PER VAPI (formato tools) ---
     if (isVapi && toolCallId) {
       const payload = {
@@ -438,7 +446,8 @@ dayISO = dayStr;
         requested_time: requestedTime || null,
         available,
         reason,
-        nearest_slots: nearest
+        nearest_slots: nearest,
+        max_people: maxPeople
       };
 
       return res.status(200).json({
@@ -462,7 +471,8 @@ dayISO = dayStr;
       requested_time: requestedTime || null,
       available,
       reason,
-      nearest_slots: nearest
+      nearest_slots: nearest,
+      max_people: maxPeople
     });
 
   } catch (err) {
