@@ -338,24 +338,36 @@ async function listReservationsByPhone(restaurantId, phone) {
     const fromDateTime = today.toISO();
     const toDateTime = end.toISO();
 
-    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime }, restaurantId);
+    // Chiedi a resOS solo prenotazioni approved (esclude cancellate lato gestionale)
+    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime, status: 'approved' }, restaurantId);
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
-    // Log diagnostico: mostra i campi relativi allo status delle prime 5 prenotazioni
+    // Log diagnostico: mostra TUTTI i campi delle prenotazioni che matchano il telefono
     if (list.length > 0) {
-      const sample = list.slice(0, 5).map(r => ({
-        id: r._id ?? r.id,
-        status: r.status,
-        canceledAt: r.canceledAt,
-        canceled_at: r.canceled_at,
-        state: r.state,
-        deleted: r.deleted,
-      }));
-      logger.info('resos_list_phone_raw_status', {
-        restaurant_id: restaurantId,
-        sample_count: sample.length,
-        sample,
-      });
+      const restId_ = restId;
+      const phoneMatches = list.filter(r =>
+        String(r.restaurantId || r.restaurant_id || '') === restId_ &&
+        (!normPhone || normalizePhone(r.guest?.phone || r.phone || '') === normPhone)
+      );
+      if (phoneMatches.length > 0) {
+        const sample = phoneMatches.slice(0, 5).map(r => ({
+          id: r._id ?? r.id,
+          status: r.status,
+          canceledAt: r.canceledAt,
+          canceled_at: r.canceled_at,
+          state: r.state,
+          deleted: r.deleted,
+          date: r.date ?? r.day,
+          time: r.time,
+        }));
+        logger.info('resos_list_phone_matched_bookings', {
+          restaurant_id: restaurantId,
+          phone: normPhone,
+          total_from_api: list.length,
+          phone_matches: phoneMatches.length,
+          sample,
+        });
+      }
     }
 
     const now = DateTime.now().setZone(tz);
@@ -424,7 +436,8 @@ async function listReservationsByDay(restaurantId, dayISO) {
     const fromDateTime = start.toISO();
     const toDateTime = end.toISO();
 
-    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime }, restaurantId);
+    // Chiedi a resOS solo prenotazioni approved
+    const raw = await api('GET', '/bookings', null, { fromDateTime, toDateTime, status: 'approved' }, restaurantId);
     const list = raw == null ? [] : (Array.isArray(raw) ? raw : raw.data ?? raw.bookings ?? []);
 
     const results = list
