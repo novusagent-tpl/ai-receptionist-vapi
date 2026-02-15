@@ -8,7 +8,7 @@
   "booking_cutoff_minutes": 30,
 
   "max_concurrent_bookings": 3,
-  "avg_stay_minutes": 60,
+  "avg_stay_minutes": 90,
 
   "openings": {
     "monday":    { "closed": true, "lunch": null,                      "dinner": null },
