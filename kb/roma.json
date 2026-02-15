@@ -9,6 +9,8 @@
 
   "max_concurrent_bookings": 3,
   "avg_stay_minutes": 60,
+  "slot_step_minutes": 30,
+  "max_nearest_slots": 2,
 
   "openings": {
     "monday":    { "closed": false, "lunch": null,                     "dinner": ["19:00", "22:30"] },

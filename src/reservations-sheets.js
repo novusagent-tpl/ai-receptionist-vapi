@@ -11,6 +11,14 @@ const logger = require('./logger');
 
 const calendar = require('./calendar');
 const { getRestaurantConfig } = require('./config/restaurants');
+const kb = require('./kb');
+const timeUtils = require('./time-utils');
+const {
+  hhmmToMinutes,
+  applyCutoffToSlots,
+  countActiveAt,
+  nearestSlots
+} = require('./capacity-utils');
 
 require('dotenv').config();
 
@@ -94,6 +102,80 @@ async function createReservation({
       }
     }
 
+    // --- VALIDAZIONE ORARIO DI APERTURA (server-side) ---
+    const info = kb.getRestaurantInfo(restaurantId);
+    const openingsConfig = kb.getOpeningsConfig(restaurantId);
+    const slotStep = Number(info && info.slot_step_minutes) || 30;
+    const openingsResult = timeUtils.openingsFor(day, openingsConfig, slotStep);
+    const tz = (info && info.timezone) || 'Europe/Rome';
+    const stayMin = Number(info && info.avg_stay_minutes) || 120;
+
+    const allSlots = Array.isArray(openingsResult.slots) ? openingsResult.slots : [];
+    const timeStr5 = String(time || '').slice(0, 5);
+    const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
+    const maxNearestSlots = Number(info && info.max_nearest_slots) || 3;
+
+    // Slot prenotabili = slot apertura filtrati per cutoff
+    const bookableSet = applyCutoffToSlots(allSlots, cutoffMin, slotStep);
+    const bookableSlots = allSlots.filter(s => bookableSet.has(hhmmToMinutes(s)));
+
+    if (openingsResult.closed) {
+      logger.warn('sheets_create_blocked_closed', {
+        restaurant_id: restaurantId, day, time: timeStr5,
+      });
+      return {
+        ok: false,
+        error_code: 'OUTSIDE_HOURS',
+        error_message: `Il ristorante è chiuso il ${day}.`,
+      };
+    }
+
+    if (!bookableSlots.includes(timeStr5)) {
+      const inOpenings = allSlots.includes(timeStr5);
+      const reason = inOpenings ? 'cutoff' : 'not_in_openings';
+      const near = nearestSlots(bookableSlots, timeStr5, maxNearestSlots);
+      logger.warn('sheets_create_blocked_outside_hours', {
+        restaurant_id: restaurantId, day, time: timeStr5, reason, nearest: near,
+      });
+      return {
+        ok: false,
+        error_code: 'OUTSIDE_HOURS',
+        error_message: reason === 'cutoff'
+          ? `L'orario ${timeStr5} è troppo vicino alla chiusura.`
+          : `L'orario ${timeStr5} non rientra nelle fasce di apertura.`,
+        nearest_slots: near,
+      };
+    }
+
+    // --- VALIDAZIONE CAPACITÀ (server-side) ---
+    const maxConc = Number(info && info.max_concurrent_bookings);
+    if (Number.isFinite(maxConc) && maxConc > 0 && Number.isFinite(stayMin) && stayMin > 0) {
+      const dayRes = await listReservationsByDay(restaurantId, day);
+      if (dayRes && dayRes.ok) {
+        const bookingTimes = (dayRes.results || []).map(x => x && x.time).filter(Boolean);
+        const activeCount = countActiveAt(day, timeStr5, bookingTimes, stayMin, tz);
+
+        if (activeCount >= maxConc) {
+          const capacityOkSlots = bookableSlots.filter(s => {
+            const c = countActiveAt(day, s, bookingTimes, stayMin, tz);
+            return c < maxConc;
+          });
+          const near = nearestSlots(capacityOkSlots, timeStr5, maxNearestSlots);
+
+          logger.warn('sheets_create_blocked_full', {
+            restaurant_id: restaurantId, day, time: timeStr5,
+            active: activeCount, max: maxConc, nearest: near,
+          });
+          return {
+            ok: false,
+            error_code: 'SLOT_FULL',
+            error_message: `Non ci sono posti disponibili alle ${timeStr5}. Prova un altro orario.`,
+            nearest_slots: near,
+          };
+        }
+      }
+    }
+
     const bookingId = uuidv4();
     const createdAt = new Date().toISOString();
 
@@ -104,7 +186,8 @@ async function createReservation({
       people,
       name,
       phone,
-      notes
+      notes,
+      durationMinutes: stayMin
     });
 
     const eventId = calRes.ok ? calRes.event_id : null;
@@ -303,6 +386,8 @@ async function updateReservation(restaurantId, bookingId, fields) {
     };
 
     if (updated.event_id) {
+      const updInfo = kb.getRestaurantInfo(restaurantId);
+      const updStayMin = Number(updInfo && updInfo.avg_stay_minutes) || 120;
       await calendar.updateCalendarEvent({
         calendarId,
         eventId: updated.event_id,
@@ -311,7 +396,8 @@ async function updateReservation(restaurantId, bookingId, fields) {
         people: updated.people,
         name: updated.name,
         phone: updated.phone,
-        notes: updated.notes
+        notes: updated.notes,
+        durationMinutes: updStayMin
       });
     }
 

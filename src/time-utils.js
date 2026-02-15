@@ -46,7 +46,7 @@ function generateTimeSlots(startStr, endStr, stepMinutes = 30) {
 // openingsFor(date, openingsConfig)
 // openingsConfig = restaurantKB.openings
 // -----------------------------
-function openingsFor(dateISO, openingsConfig) {
+function openingsFor(dateISO, openingsConfig, stepMinutes = 30) {
 
   // -----------------------------
   // OVERRIDES per data (priorità assoluta)
@@ -63,12 +63,12 @@ function openingsFor(dateISO, openingsConfig) {
     let dinnerRange = null;
 
     if (override.lunch && Array.isArray(override.lunch) && override.lunch.length === 2) {
-      slots.push(...generateTimeSlots(override.lunch[0], override.lunch[1]));
+      slots.push(...generateTimeSlots(override.lunch[0], override.lunch[1], stepMinutes));
       lunchRange = [override.lunch[0], override.lunch[1]];
     }
 
     if (override.dinner && Array.isArray(override.dinner) && override.dinner.length === 2) {
-      slots.push(...generateTimeSlots(override.dinner[0], override.dinner[1]));
+      slots.push(...generateTimeSlots(override.dinner[0], override.dinner[1], stepMinutes));
       dinnerRange = [override.dinner[0], override.dinner[1]];
     }
 
@@ -95,13 +95,13 @@ function openingsFor(dateISO, openingsConfig) {
 
   // lunch
   if (config.lunch && Array.isArray(config.lunch) && config.lunch.length === 2) {
-    slots.push(...generateTimeSlots(config.lunch[0], config.lunch[1]));
+    slots.push(...generateTimeSlots(config.lunch[0], config.lunch[1], stepMinutes));
     lunchRange = [config.lunch[0], config.lunch[1]];
   }
 
   // dinner
   if (config.dinner && Array.isArray(config.dinner) && config.dinner.length === 2) {
-    slots.push(...generateTimeSlots(config.dinner[0], config.dinner[1]));
+    slots.push(...generateTimeSlots(config.dinner[0], config.dinner[1], stepMinutes));
     dinnerRange = [config.dinner[0], config.dinner[1]];
   }
 

@@ -47,7 +47,11 @@ function getRestaurantInfo(restaurantId) {
 
     // G20 capacity
     max_concurrent_bookings: kb.max_concurrent_bookings ?? null,
-    avg_stay_minutes: kb.avg_stay_minutes ?? null
+    avg_stay_minutes: kb.avg_stay_minutes ?? null,
+
+    // Slot e nearest configurabili
+    slot_step_minutes: kb.slot_step_minutes ?? null,
+    max_nearest_slots: kb.max_nearest_slots ?? null
   };
 }
 

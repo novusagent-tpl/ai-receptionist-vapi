@@ -4,102 +4,13 @@ const logger = require('../logger');
 const reservations = require('../reservations');
 const { getRestaurantConfig } = require('../config/restaurants');
 const { DateTime } = require('luxon');
-
-/* =========================
-   Helpers: time validation + nearest slots
-========================= */
-
-function isValidHHMM(s) {
-  if (!s || typeof s !== 'string') return false;
-  const m = s.match(/^(\d{2}):(\d{2})$/);
-  if (!m) return false;
-  const hh = Number(m[1]);
-  const mm = Number(m[2]);
-  return Number.isInteger(hh) && Number.isInteger(mm) && hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59;
-}
-
-function toMinutes(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-}
-
-function nearestSlots(slots, requestedTime, max = 3) {
-  if (!Array.isArray(slots) || slots.length === 0) return [];
-  const req = toMinutes(requestedTime);
-
-  return slots
-    .map(s => ({ s, d: Math.abs(toMinutes(s) - req) }))
-    .sort((a, b) => a.d - b.d)
-    .map(x => x.s)
-    .slice(0, max);
-}
-
-function hhmmToMinutes(hhmm) {
-  const [h, m] = String(hhmm).split(':').map(Number);
-  return (h * 60) + m;
-}
-
-// Split slots into contiguous blocks (e.g., lunch vs dinner) using stepMinutes gap
-function splitIntoBlocks(slots, stepMinutes = 30) {
-  const mins = (slots || []).map(hhmmToMinutes).sort((a,b)=>a-b);
-  const blocks = [];
-  let cur = [];
-
-  for (const x of mins) {
-    if (!cur.length) { cur.push(x); continue; }
-    const prev = cur[cur.length - 1];
-    if (x - prev > stepMinutes) { blocks.push(cur); cur = [x]; }
-    else cur.push(x);
-  }
-  if (cur.length) blocks.push(cur);
-  return blocks;
-}
-
-// Returns a Set of bookable slot minutes after applying cutoff per block
-function applyCutoffToSlots(slots, cutoffMinutes, stepMinutes = 30) {
-  if (!cutoffMinutes || cutoffMinutes <= 0) {
-    return new Set((slots || []).map(hhmmToMinutes));
-  }
-
-  const blocks = splitIntoBlocks(slots, stepMinutes);
-  const bookable = new Set();
-
-  for (const block of blocks) {
-    const lastStart = block[block.length - 1];
-    const closing = lastStart + stepMinutes;              // infer close as last slot + step
-    const threshold = closing - cutoffMinutes;            // latest allowed start time (in minutes)
-    for (const t of block) {
-      if (t <= threshold) bookable.add(t);
-    }
-  }
-  return bookable;
-}
-
-
-function buildDateTime(dayISO, hhmm, tz = 'Europe/Rome') {
-  const [hh, mm] = hhmm.split(':').map(Number);
-  return DateTime.fromISO(dayISO, { zone: tz }).set({
-    hour: hh, minute: mm, second: 0, millisecond: 0
-  });
-}
-
-function countActiveAt(dayISO, atTime, bookingTimes, avgStayMinutes, tz = 'Europe/Rome') {
-  // Overlap bidirezionale: una nuova prenotazione a atTime con durata avgStayMinutes
-  // conflitterebbe con tutte le prenotazioni il cui intervallo si sovrappone.
-  const newStart = buildDateTime(dayISO, atTime, tz);
-  const newEnd = newStart.plus({ minutes: avgStayMinutes });
-  let count = 0;
-
-  for (const bt of bookingTimes) {
-    if (!bt || typeof bt !== 'string' || !/^\d{2}:\d{2}$/.test(bt)) continue;
-    const existStart = buildDateTime(dayISO, bt, tz);
-    const existEnd = existStart.plus({ minutes: avgStayMinutes });
-    // Due intervalli [a,b) e [c,d) si sovrappongono se a < d AND c < b
-    if (existStart < newEnd && newStart < existEnd) count++;
-  }
-
-  return count;
-}
+const {
+  isValidHHMM,
+  hhmmToMinutes,
+  applyCutoffToSlots,
+  countActiveAt,
+  nearestSlots
+} = require('../capacity-utils');
 
 
 module.exports = async function checkOpenings(req, res) {
@@ -256,7 +167,9 @@ dayISO = dayStr;
 
     // --- LOGICA ORARI ---
     const openingsConfig = kb.getOpeningsConfig(restaurantId);
-    const result = timeUtils.openingsFor(dayISO, openingsConfig);
+    const infoEarly = kb.getRestaurantInfo(restaurantId);
+    const slotStepEarly = Number(infoEarly && infoEarly.slot_step_minutes) || 30;
+    const result = timeUtils.openingsFor(dayISO, openingsConfig, slotStepEarly);
 
     // --- VALIDAZIONE ORARIO NEL PASSATO (se requestedTime presente) ---
     if (requestedTime) {
@@ -307,7 +220,9 @@ dayISO = dayStr;
       const slots = Array.isArray(result.slots) ? result.slots : [];
       const info = kb.getRestaurantInfo(restaurantId);
       const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
-      const bookableSet = applyCutoffToSlots(slots, cutoffMin, 30);
+      const slotStep = Number(info && info.slot_step_minutes) || 30;
+      const maxNear = Number(info && info.max_nearest_slots) || 3;
+      const bookableSet = applyCutoffToSlots(slots, cutoffMin, slotStep);
       const bookableSlots = slots.filter(s => bookableSet.has(hhmmToMinutes(s)));
 
       const inOpenings = slots.includes(requestedTime);       // dentro fascia teorica
@@ -394,7 +309,7 @@ dayISO = dayStr;
         return c < maxConc;
       });
 
-      nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, 3);
+      nearest = available ? [] : nearestSlots(capacityOkSlots, requestedTime, maxNear);
 
       logger.info('capacity_check_success', {
         restaurant_id: restaurantId,

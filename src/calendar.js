@@ -20,13 +20,14 @@ function getCalendarClient() {
 }
 
 // Helper: costruisce start/end ISO da day + time
-function buildDateTimes(day, time, timezone = 'Europe/Rome') {
+// durationMinutes: durata evento in minuti (default 120 = 2h)
+function buildDateTimes(day, time, timezone = 'Europe/Rome', durationMinutes = 120) {
   const [hourStr, minuteStr] = time.split(':');
   const hour = Number(hourStr);
   const minute = Number(minuteStr);
 
   const start = DateTime.fromISO(day, { zone: timezone }).set({ hour, minute });
-  const end = start.plus({ hours: 2 }); // durata standard 2 ore
+  const end = start.plus({ minutes: durationMinutes });
 
   return {
     start: start.toISO(),
@@ -45,11 +46,12 @@ async function createCalendarEvent({
   people,
   name,
   phone,
-  notes
+  notes,
+  durationMinutes
 }) {
   try {
     const calendar = getCalendarClient();
-    const { start, end, timezone } = buildDateTimes(day, time);
+    const { start, end, timezone } = buildDateTimes(day, time, 'Europe/Rome', durationMinutes || 120);
 
     const summary = `Prenotazione - ${name} (${people} pax)`;
     const description = [
@@ -102,11 +104,12 @@ async function updateCalendarEvent({
   people,
   name,
   phone,
-  notes
+  notes,
+  durationMinutes
 }) {
   try {
     const calendar = getCalendarClient();
-    const { start, end, timezone } = buildDateTimes(day, time);
+    const { start, end, timezone } = buildDateTimes(day, time, 'Europe/Rome', durationMinutes || 120);
 
     const summary = `Prenotazione - ${name} (${people} pax)`;
     const description = [
