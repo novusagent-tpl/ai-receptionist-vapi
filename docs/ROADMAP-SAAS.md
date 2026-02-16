@@ -565,6 +565,24 @@ Contiene:
 
 ---
 
+## Fase G — Espansione canali
+
+### G1. WhatsApp Business chatbot
+**Obiettivo:** Aggiungere un canale WhatsApp al sistema esistente, riutilizzando lo stesso backend e tools.
+
+**Cosa serve:**
+- [ ] Connettore WhatsApp Business API (Meta Cloud API o provider tipo Twilio/360dialog)
+- [ ] Webhook per ricevere messaggi WhatsApp → inoltrare al backend come se fossero chiamate Vapi
+- [ ] Adapter per formattare le risposte AI in testo (senza TTS)
+- [ ] Gestione sessioni (conversation_id per ogni chat WhatsApp)
+- [ ] Stesse regole di business (orari, capacità, FAQ) già presenti nel backend
+
+**Vantaggi:** Backend e tools identici, nessuna duplicazione di logica. Solo un nuovo "connettore" di ingresso.
+
+**Status:** [ ] Da fare (dopo lancio voce)
+
+---
+
 ## COSA NON FARE ORA
 
 - ❌ Non toccare backend "per provare" senza motivo
@@ -604,6 +622,7 @@ Contiene:
 | E3 | Primo cliente | 🔴 ALTA | D2, B4, B5 | [ ] |
 | F1 | Form web personale | 🟠 MEDIA-ALTA | - | [ ] |
 | F2 | Rischi Sheets/Calendar | 🟡 MEDIA | F1 | [ ] Documentato |
+| G1 | WhatsApp Business chatbot | 🟡 MEDIA | D2, lancio voce | [ ] |
 
 **Legenda:** 🔴 Bloccante per test/lancio | 🟠 Importante pre-lancio | 🟡 Può aspettare
 
@@ -643,6 +662,9 @@ Contiene:
 - E2 - Demo pubblica
 - E3 - Primo cliente
 
+**STEP 6 — Espansione canali (dopo lancio voce):**
+- G1 - WhatsApp Business chatbot (stesso backend/tools, nuovo connettore)
+
 ---
 
-*Ultimo aggiornamento: 2026-02-03*
+*Ultimo aggiornamento: 2026-02-16*
