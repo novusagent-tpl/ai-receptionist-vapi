@@ -104,6 +104,23 @@ function parseRelativeTime(textRaw) {
   tNoAcc = tNoAcc.replace("un'ora", 'una ora');
   tNoAcc = tNoAcc.replace('un ora', 'una ora');
 
+  // Orari assoluti: se l'AI manda "21", "20", "19:30", "20:00" ecc. → rispondi con l'orario normalizzato
+  const absHHMM = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2}):(\d{2})$/);
+  if (absHHMM) {
+    const hh = Number(absHHMM[1]);
+    const mm = Number(absHHMM[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return { ok: true, time: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}` };
+    }
+  }
+  const absHour = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2})$/);
+  if (absHour) {
+    const hh = Number(absHour[1]);
+    if (hh >= 0 && hh <= 23) {
+      return { ok: true, time: `${String(hh).padStart(2, '0')}:00` };
+    }
+  }
+
   // Casi vaghi → NON supportati
   if (
     /\bverso\b/.test(tNoAcc) ||

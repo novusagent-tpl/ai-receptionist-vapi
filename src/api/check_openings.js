@@ -12,6 +12,38 @@ const {
   nearestSlots
 } = require('../capacity-utils');
 
+const ITALIAN_DAYS = {
+  monday: 'lunedì', tuesday: 'martedì', wednesday: 'mercoledì',
+  thursday: 'giovedì', friday: 'venerdì', saturday: 'sabato', sunday: 'domenica'
+};
+
+function findNextOpenDay(dayISO, openingsConfig, slotStep) {
+  const base = DateTime.fromISO(dayISO, { zone: 'Europe/Rome' });
+  for (let i = 1; i <= 7; i++) {
+    const next = base.plus({ days: i });
+    const nextISO = next.toISODate();
+    const res = timeUtils.openingsFor(nextISO, openingsConfig, slotStep);
+    if (!res.closed) {
+      const dow = next.toFormat('cccc').toLowerCase();
+      return {
+        next_open_day: nextISO,
+        next_open_day_label: ITALIAN_DAYS[dow] || dow,
+        next_open_ranges: {
+          lunch: res.lunch_range ? `${res.lunch_range[0]}–${res.lunch_range[1]}` : null,
+          dinner: res.dinner_range ? `${res.dinner_range[0]}–${res.dinner_range[1]}` : null
+        }
+      };
+    }
+  }
+  return null;
+}
+
+function formatRangesText(lunchRange, dinnerRange) {
+  const parts = [];
+  if (lunchRange) parts.push(`pranzo dalle ${lunchRange[0]} alle ${lunchRange[1]}`);
+  if (dinnerRange) parts.push(`cena dalle ${dinnerRange[0]} alle ${dinnerRange[1]}`);
+  return parts.join(' e ');
+}
 
 module.exports = async function checkOpenings(req, res) {
   // IMPORTANT: queste variabili devono stare fuori dal try
@@ -214,9 +246,30 @@ dayISO = dayStr;
     // availability (solo se requestedTime presente)
     let available = null;
     let nearest = null;
-    let reason = null; // 'cutoff' | 'not_in_openings' | 'full' | null
+    let reason = null; // 'closed' | 'cutoff' | 'not_in_openings' | 'full' | null
 
-    if (requestedTime) {
+    if (requestedTime && result.closed) {
+      // Giorno chiuso: short-circuit, niente capacity check
+      available = false;
+      reason = 'closed';
+      nearest = [];
+
+      logger.info('capacity_check_success', {
+        restaurant_id: restaurantId,
+        day: dayISO,
+        requested_time: requestedTime,
+        in_openings: false,
+        slot_exists: false,
+        active_bookings_count: null,
+        max_concurrent_bookings: null,
+        avg_stay_minutes: null,
+        available: false,
+        reason: 'closed',
+        nearest_slots_count: 0,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
+    } else if (requestedTime) {
       const slots = Array.isArray(result.slots) ? result.slots : [];
       const info = kb.getRestaurantInfo(restaurantId);
       const cutoffMin = Number(info && info.booking_cutoff_minutes) || 0;
@@ -349,33 +402,78 @@ dayISO = dayStr;
       maxPeople = restCfg && restCfg.max_people ? Number(restCfg.max_people) : null;
     } catch { /* ignore */ }
 
+    // --- B5: next_open_day quando chiuso ---
+    let nextOpen = null;
+    if (result.closed) {
+      const slotStepForNext = Number((kb.getRestaurantInfo(restaurantId) || {}).slot_step_minutes) || 30;
+      nextOpen = findNextOpenDay(dayISO, openingsConfig, slotStepForNext);
+    }
+
+    // --- B1: costruzione campo message per Vapi ---
+    let message = null;
+    if (result.closed) {
+      const dayDtLabel = DateTime.fromISO(dayISO, { zone: 'Europe/Rome' });
+      const dowIt = ITALIAN_DAYS[dayDtLabel.toFormat('cccc').toLowerCase()] || '';
+      message = `Il ristorante è chiuso ${dowIt}.`;
+      if (nextOpen) {
+        const rangesTxt = [];
+        if (nextOpen.next_open_ranges.lunch) rangesTxt.push(`pranzo dalle ${nextOpen.next_open_ranges.lunch.replace('–', ' alle ')}`);
+        if (nextOpen.next_open_ranges.dinner) rangesTxt.push(`cena dalle ${nextOpen.next_open_ranges.dinner.replace('–', ' alle ')}`);
+        message += ` Il prossimo giorno di apertura è ${nextOpen.next_open_day_label} con ${rangesTxt.join(' e ')}.`;
+      }
+    } else if (!requestedTime) {
+      const rangesTxt = formatRangesText(result.lunch_range, result.dinner_range);
+      message = rangesTxt ? `Orari di apertura: ${rangesTxt}.` : 'Nessun orario di apertura trovato.';
+    } else if (available === true) {
+      message = 'Disponibile.';
+    } else if (reason === 'not_in_openings') {
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      message = nearTxt
+        ? `Questo orario non è disponibile per prenotazioni. Orari più vicini: ${nearTxt}.`
+        : 'Questo orario non è disponibile per prenotazioni.';
+    } else if (reason === 'cutoff') {
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      message = nearTxt
+        ? `Questo orario è troppo vicino alla chiusura. Orari più vicini: ${nearTxt}.`
+        : 'Questo orario è troppo vicino alla chiusura.';
+    } else if (reason === 'full') {
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      message = nearTxt
+        ? `Nessun tavolo disponibile a quest'ora. Orari più vicini: ${nearTxt}.`
+        : 'Nessun tavolo disponibile a quest\'ora.';
+    }
+
     // --- RISPOSTA PER VAPI (formato tools) ---
     if (isVapi && toolCallId) {
       const payload = {
         restaurant_id: restaurantId,
         day: dayISO,
         closed: result.closed,
-        slots: result.slots,
         lunch_range: result.lunch_range || null,
         dinner_range: result.dinner_range || null,
         requested_time: requestedTime || null,
         available,
         reason,
         nearest_slots: nearest,
-        max_people: maxPeople
+        max_people: maxPeople,
+        message
       };
+      if (nextOpen) {
+        payload.next_open_day = nextOpen.next_open_day;
+        payload.next_open_day_label = nextOpen.next_open_day_label;
+        payload.next_open_ranges = nextOpen.next_open_ranges;
+      }
 
       return res.status(200).json({
         results: [{
           toolCallId,
-          // Vapi vuole una stringa singola come result
           result: JSON.stringify(payload)
         }]
       });
     }
 
     // --- RISPOSTA "LEGACY" PER TEST MANUALI (Postman) ---
-    return res.status(200).json({
+    const httpResponse = {
       ok: true,
       restaurant_id: restaurantId,
       day: dayISO,
@@ -387,8 +485,15 @@ dayISO = dayStr;
       available,
       reason,
       nearest_slots: nearest,
-      max_people: maxPeople
-    });
+      max_people: maxPeople,
+      message
+    };
+    if (nextOpen) {
+      httpResponse.next_open_day = nextOpen.next_open_day;
+      httpResponse.next_open_day_label = nextOpen.next_open_day_label;
+      httpResponse.next_open_ranges = nextOpen.next_open_ranges;
+    }
+    return res.status(200).json(httpResponse);
 
   } catch (err) {
     const errMsg = err && err.message ? err.message : String(err);
