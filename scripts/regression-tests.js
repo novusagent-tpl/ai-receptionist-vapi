@@ -8,7 +8,7 @@
  *
  * Cosa testa:
  *  - check_openings (giorno aperto, chiuso, orario passato, validazione)
- *  - resolve_relative_day (domani, sabato, oggi, non riconosciuto)
+ *  - resolve_relative_day (domani, sabato, oggi, stasera, non riconosciuto)
  *  - resolve_relative_time (tra mezz'ora, tra 2 ore, orario vago, non riconosciuto)
  *  - is_open_now (ristorante valido, ristorante mancante)
  *  - faq (match trovato, nessun match, validazione)
@@ -22,6 +22,11 @@
  *  - is_open_now
  *  - Validazione (manca day, manca phone, MAX_PEOPLE_EXCEEDED, manca booking_id)
  *  - CRUD completo: create → list → modify → cancel (su sandbox reale)
+ *
+ * Sheets/Calendar (roma – Google Sheets reale):
+ *  - Enforcement server-side: giorno chiuso, fuori orario, cutoff
+ *  - check_openings: max_people nella risposta, nearest_slots capacity-aware
+ *  - CRUD completo: create → list → modify → cancel (su Sheets reale)
  */
 
 const BASE_URL = process.argv[2] || 'http://localhost:3000';
@@ -214,7 +219,16 @@ async function testResolveRelativeDay() {
   });
   assert('tra 3 giorni – ok:true', r5.ok === true, r5.ok, true);
 
-  // 6. Espressione non riconosciuta
+  // 6. "stasera" → oggi (fix B2)
+  const r6b = await post('/api/resolve_relative_day', {
+    restaurant_id: 'modena01',
+    text: 'stasera',
+  });
+  const todayISO = new Date().toISOString().split('T')[0];
+  assert('stasera – ok:true', r6b.ok === true, r6b.ok, true);
+  assert('stasera – data = oggi', r6b.date === todayISO, r6b.date, todayISO);
+
+  // 7. Espressione non riconosciuta
   const r6 = await post('/api/resolve_relative_day', {
     restaurant_id: 'modena01',
     text: 'la settimana prossima forse',
@@ -691,6 +705,200 @@ async function testOctoTableCRUD() {
 }
 
 // ─────────────────────────────────────────────
+// Sheets/Calendar Tests (roma — Google Sheets reale)
+// ─────────────────────────────────────────────
+
+async function testSheetsCheckOpenings() {
+  console.log(`\n${CYAN}═══ Sheets: check_openings (roma) ═══${RESET}`);
+
+  // roma: Lun-Sab aperto (cena 19:00-22:30), Domenica chiuso
+  // max_concurrent_bookings: 3, avg_stay_minutes: 60, booking_cutoff_minutes: 45
+
+  // 1. Giorno aperto (venerdì = weekday 5, ha pranzo + cena)
+  const openDay = getNextWeekday(5);
+  const r1 = await post('/api/check_openings', {
+    restaurant_id: 'roma',
+    day: openDay,
+  });
+  assert('roma giorno aperto – ok:true', r1.ok === true, r1.ok, true);
+  assert('roma giorno aperto – closed:false', r1.closed === false, r1.closed, false);
+  assert('roma giorno aperto – ha slots', Array.isArray(r1.slots) && r1.slots.length > 0, r1.slots?.length, '>0');
+
+  // 2. Giorno chiuso (domenica)
+  const closedDay = getNextWeekday(7);
+  const r2 = await post('/api/check_openings', {
+    restaurant_id: 'roma',
+    day: closedDay,
+  });
+  assert('roma giorno chiuso – ok:true', r2.ok === true, r2.ok, true);
+  assert('roma giorno chiuso – closed:true', r2.closed === true, r2.closed, true);
+
+  // 3. Orario in slot (20:00 = cena) con available + max_people
+  const r3 = await post('/api/check_openings', {
+    restaurant_id: 'roma',
+    day: openDay,
+    time: '20:00',
+  });
+  assert('roma orario in slot – ok:true', r3.ok === true, r3.ok, true);
+  assert('roma orario in slot – available è boolean', typeof r3.available === 'boolean', typeof r3.available, 'boolean');
+  assert('roma orario in slot – max_people presente', r3.max_people != null && r3.max_people > 0, r3.max_people, '>0');
+
+  // 4. Orario fuori slot (16:00)
+  const r4 = await post('/api/check_openings', {
+    restaurant_id: 'roma',
+    day: openDay,
+    time: '16:00',
+  });
+  assert('roma orario fuori slot – available:false', r4.available === false, r4.available, false);
+  assert('roma orario fuori slot – reason:not_in_openings', r4.reason === 'not_in_openings', r4.reason, 'not_in_openings');
+  assert('roma orario fuori slot – ha nearest_slots', Array.isArray(r4.nearest_slots) && r4.nearest_slots.length > 0, r4.nearest_slots?.length, '>0');
+}
+
+async function testSheetsEnforcement() {
+  console.log(`\n${CYAN}═══ Sheets: enforcement server-side (roma) ═══${RESET}`);
+
+  // roma: Domenica chiuso, cena 19:00-22:30, cutoff 45 min
+  const closedDay = getNextWeekday(7); // domenica
+  const openDay = getNextWeekday(5);   // venerdì
+
+  // 1. create_booking su giorno chiuso → OUTSIDE_HOURS
+  const r1 = await post('/api/create_booking', {
+    restaurant_id: 'roma',
+    day: closedDay,
+    time: '20:00',
+    people: 2,
+    name: 'Test Chiuso',
+    phone: '+393339999801',
+  });
+  assert('Giorno chiuso – ok:false', r1.ok === false, r1.ok, false);
+  assert('Giorno chiuso – OUTSIDE_HOURS', r1.error_code === 'OUTSIDE_HOURS', r1.error_code, 'OUTSIDE_HOURS');
+
+  // 2. create_booking fuori orario (16:00 di venerdì) → OUTSIDE_HOURS
+  const r2 = await post('/api/create_booking', {
+    restaurant_id: 'roma',
+    day: openDay,
+    time: '16:00',
+    people: 2,
+    name: 'Test Fuori Orario',
+    phone: '+393339999802',
+  });
+  assert('Fuori orario – ok:false', r2.ok === false, r2.ok, false);
+  assert('Fuori orario – OUTSIDE_HOURS', r2.error_code === 'OUTSIDE_HOURS', r2.error_code, 'OUTSIDE_HOURS');
+  assert('Fuori orario – ha nearest_slots', Array.isArray(r2.nearest_slots) && r2.nearest_slots.length > 0, r2.nearest_slots?.length, '>0');
+
+  // 3. MAX_PEOPLE_EXCEEDED (roma max=8)
+  const r3 = await post('/api/create_booking', {
+    restaurant_id: 'roma',
+    day: openDay,
+    time: '20:00',
+    people: 15,
+    name: 'Test Troppe Persone',
+    phone: '+393339999803',
+  });
+  assert('Troppe persone – ok:false', r3.ok === false, r3.ok, false);
+  assert('Troppe persone – MAX_PEOPLE_EXCEEDED', r3.error_code === 'MAX_PEOPLE_EXCEEDED', r3.error_code, 'MAX_PEOPLE_EXCEEDED');
+}
+
+async function testSheetsCRUD() {
+  console.log(`\n${CYAN}═══ Sheets: CRUD COMPLETO (roma → Google Sheets reale) ═══${RESET}`);
+
+  // Usa un giorno futuro (prossimo giovedì) per evitare conflitti
+  const testDay = getNextWeekday(4); // giovedì
+  const testTime = '20:00';
+  const testPhone = '+393339999901';
+  const testName = 'Test CRUD Sheets';
+
+  // ─── STEP 1: check_openings ───
+  console.log(`\n  ${YELLOW}Step 1: check_openings${RESET}`);
+  const openCheck = await post('/api/check_openings', {
+    restaurant_id: 'roma',
+    day: testDay,
+    time: testTime,
+  });
+  assert('CRUD-S 1 – check_openings ok:true', openCheck.ok === true, openCheck.ok, true);
+  assert('CRUD-S 1 – available:true', openCheck.available === true, openCheck.available, true);
+
+  if (!openCheck.available) {
+    console.log(`  ${YELLOW}SKIP: orario non disponibile, CRUD non eseguibile${RESET}`);
+    return;
+  }
+
+  // ─── STEP 2: create_booking ───
+  console.log(`\n  ${YELLOW}Step 2: create_booking${RESET}`);
+  const created = await post('/api/create_booking', {
+    restaurant_id: 'roma',
+    day: testDay,
+    time: testTime,
+    people: 2,
+    name: testName,
+    phone: testPhone,
+  });
+  assert('CRUD-S 2 – create ok:true', created.ok === true, created.ok, true);
+  assert('CRUD-S 2 – ha booking_id', !!created.booking_id, created.booking_id, 'non null');
+
+  if (!created.ok || !created.booking_id) {
+    console.log(`  ${RED}STOP: create fallito, non posso continuare CRUD${RESET}`);
+    console.log(`  Dettaglio: ${JSON.stringify(created)}`);
+    return;
+  }
+
+  const bookingId = created.booking_id;
+  console.log(`  Booking creato: ${bookingId}`);
+
+  // ─── STEP 3: list_bookings ───
+  console.log(`\n  ${YELLOW}Step 3: list_bookings${RESET}`);
+  const listed = await post('/api/list_bookings', {
+    restaurant_id: 'roma',
+    phone: testPhone,
+  });
+  assert('CRUD-S 3 – list ok:true', listed.ok === true, listed.ok, true);
+  const listResults = listed.results || [];
+  assert('CRUD-S 3 – count >= 1', listResults.length >= 1, listResults.length, '>=1');
+
+  const found = listResults.some(b => String(b.booking_id || b.id) === String(bookingId));
+  assert('CRUD-S 3 – booking trovato in lista', found === true, found, true);
+
+  // ─── STEP 4: modify_booking (cambia persone: 2 → 4) ───
+  console.log(`\n  ${YELLOW}Step 4: modify_booking (people 2 → 4)${RESET}`);
+  const modified = await post('/api/modify_booking', {
+    restaurant_id: 'roma',
+    booking_id: bookingId,
+    new_people: 4,
+  });
+  assert('CRUD-S 4 – modify ok:true', modified.ok === true, modified.ok, true);
+
+  // Verifica la modifica con una nuova list
+  const listed2 = await post('/api/list_bookings', {
+    restaurant_id: 'roma',
+    phone: testPhone,
+  });
+  const list2Results = listed2.results || [];
+  const modifiedBooking = list2Results.find(b => String(b.booking_id || b.id) === String(bookingId));
+  if (modifiedBooking) {
+    assert('CRUD-S 4 – people aggiornato a 4', Number(modifiedBooking.people) === 4, modifiedBooking.people, 4);
+  }
+
+  // ─── STEP 5: cancel_booking ───
+  console.log(`\n  ${YELLOW}Step 5: cancel_booking${RESET}`);
+  const cancelled = await post('/api/cancel_booking', {
+    restaurant_id: 'roma',
+    booking_id: bookingId,
+  });
+  assert('CRUD-S 5 – cancel ok:true', cancelled.ok === true, cancelled.ok, true);
+
+  // Verifica che non compaia più nella lista
+  const listed3 = await post('/api/list_bookings', {
+    restaurant_id: 'roma',
+    phone: testPhone,
+  });
+  const list3Results = listed3.results || [];
+  const stillThere = list3Results.some(b => String(b.booking_id || b.id) === String(bookingId));
+  assert('CRUD-S 5 – booking rimosso dalla lista', stillThere === false, stillThere, false);
+
+  console.log(`\n  ${GREEN}✓ Ciclo CRUD Sheets completo!${RESET}`);
+}
+
+// ─────────────────────────────────────────────
 // Runner
 // ─────────────────────────────────────────────
 
@@ -719,6 +927,12 @@ async function run() {
     await testOctoTableIsOpenNow();
     await testOctoTableValidation();
     await testOctoTableCRUD();
+
+    // Sheets/Calendar (roma – Google Sheets reale)
+    console.log(`\n${YELLOW}──── Sheets/Calendar Integration Tests ────${RESET}`);
+    await testSheetsCheckOpenings();
+    await testSheetsEnforcement();
+    await testSheetsCRUD();
   } catch (err) {
     console.log(`\n${RED}ERRORE FATALE: ${err.message}${RESET}`);
     console.log(`Verifica che il server sia avviato su ${BASE_URL}`);

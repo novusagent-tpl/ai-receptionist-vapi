@@ -532,6 +532,39 @@ Contiene:
 
 ---
 
+## FASE F — PANNELLO PERSONALE + SYNC SHEETS/CALENDAR (Priorità: pre-lancio per ristoranti su Sheets)
+
+### F1. Form web per il personale
+**Obiettivo:** Il personale del ristorante registra prenotazioni manuali (handover, walk-in, telefono) passando dal nostro backend, cosi Sheets e Calendar restano sincronizzati e il sistema vede tutto.
+
+- [ ] Pagina web semplice (mobile-friendly, nessun framework pesante)
+- [ ] Campi: giorno, ora, persone, nome, telefono, note
+- [ ] Chiama lo stesso endpoint `create_booking` del backend → stessa validazione (capacita, orari, cutoff)
+- [ ] Link privato con token per ogni ristorante (nessun login complesso)
+- [ ] Possibilita di vedere/cancellare/modificare prenotazioni esistenti
+
+**Perche serve:** Senza questo, il personale scrive su carta o direttamente su Calendar → il sistema non vede la prenotazione → rischio overbooking.
+
+**Status:** [ ] Da fare
+
+---
+
+### F2. Rischi noti Sheets/Calendar da monitorare
+**Obiettivo:** Documentare i rischi conosciuti e le soluzioni future.
+
+| Rischio | Impatto | Soluzione | Priorita |
+|---------|---------|-----------|----------|
+| Prenotazione manuale su Calendar (non su Sheets) | Sistema non la vede → overbooking | F1 (form web) | Alta (pre-lancio) |
+| Cancellazione da Calendar senza toglierla da Sheets | Tavolo risulta occupato per nulla | F1 (gestione completa dal form) | Alta (pre-lancio) |
+| Cancellazione da Sheets senza toglierla da Calendar | Ristoratore vede evento fantasma | F1 (gestione completa dal form) | Media |
+| Race condition (2 booking contemporanei, ultimo tavolo) | Doppia prenotazione (quasi impossibile con volumi ristorante) | Lock o check-and-write atomico | Bassa |
+| Limiti API Google Sheets (300 req/min) | Problema solo con 50+ ristoranti su Sheets | Migrazione a PostgreSQL per alto volume | Bassa (futura) |
+| Nessuna notifica al ristoratore | Non sa in tempo reale di nuove prenotazioni | Webhook/email/SMS dopo create_booking | Media |
+
+**Status:** [ ] Documentato, da risolvere progressivamente
+
+---
+
 ## COSA NON FARE ORA
 
 - ❌ Non toccare backend "per provare" senza motivo
@@ -569,6 +602,8 @@ Contiene:
 | E1 | Sito web | 🟡 MEDIA | - | [ ] |
 | E2 | Demo pubblica | 🟡 MEDIA | D2, B6 | [ ] |
 | E3 | Primo cliente | 🔴 ALTA | D2, B4, B5 | [ ] |
+| F1 | Form web personale | 🟠 MEDIA-ALTA | - | [ ] |
+| F2 | Rischi Sheets/Calendar | 🟡 MEDIA | F1 | [ ] Documentato |
 
 **Legenda:** 🔴 Bloccante per test/lancio | 🟠 Importante pre-lancio | 🟡 Può aspettare
 
@@ -601,6 +636,7 @@ Contiene:
 - B4 - GDPR / Privacy
 - B5 - Security review finale
 - B6 - Rate limiting (prima di demo pubblica)
+- F1 - Form web personale (per ristoranti su Sheets/Calendar)
 
 **STEP 5 — Go-to-market:**
 - E1 - Sito web
