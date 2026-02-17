@@ -104,8 +104,8 @@ function parseRelativeTime(textRaw) {
   tNoAcc = tNoAcc.replace("un'ora", 'una ora');
   tNoAcc = tNoAcc.replace('un ora', 'una ora');
 
-  // Orari assoluti: se l'AI manda "21", "20", "19:30", "20:00" ecc. → rispondi con l'orario normalizzato
-  const absHHMM = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2}):(\d{2})$/);
+  // Orari assoluti: se l'AI manda "21", "20", "19:30", "20:00", "22.30" ecc. → rispondi con l'orario normalizzato
+  const absHHMM = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2})[:.](\d{2})$/);
   if (absHHMM) {
     const hh = Number(absHHMM[1]);
     const mm = Number(absHHMM[2]);
