@@ -248,11 +248,13 @@ Menu
 
 **Tool attesi:** list_bookings
 
-**Esito:**
+**Esito:**Prenotaioni future ho solo una dal numero da cui chiamo ed è per il 19
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso aiutarla a controllare le sue prenotazioni. Mi può fornire il numero di telefono che usato per la prenotazione? - Cliente: Il numero da cui chiamo; 
+2.Una prenotazione per 19 febbraio alle 21.30 per 2 persone a nome Mauro. Vuole modificare o cancellare questa prenotazione? - Cliente: No volevo sapere solo i dati.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-17T19:12:47.403Z","level":"info","event":"api_request","request_id":"a9cd6965","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d04-927b-7225-b4a5-70767743df9c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:12:48.293Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"a9cd6965"}
 
 ---
 
@@ -264,11 +266,21 @@ Menu
 
 **Tool attesi:** list_bookings
 
-**Esito:**
+**Esito:** Allora qui c'è una cosa, io con il numero da cui ho chiamato ho solo una prenotazione per giovedì 19 febbraio, e se chiedo se ho una prenotazione per sabato mi dice di si però con i dati di questa del 19, controlla la conversazione e dimmi cosa ne pensi e qualle potrebbe essere il rpoblema e come possiamo risolvere questo.
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Vorrei sapere se ho una prenotazione per sabato.; 1.Mi può confermare numero di telefono utilizzato per la prenotazione? - Cliente: Sì il numero è 3 4 9 2 6 7 4 6 8 8.; 2.Ho trovato una prenotazione per sabato 19 febbraio alle 21.30 a nome Mauro per 2 persone. Vuole modificare o cancellare questa prenotazione? - Cliente: No va bene così, va bene lo stesso grazie.; 3.Perfetto. Se hai bisogno di ulteriore aiuto non esiti a contattarmi. Arrivederci...
 
-**Log tool chiamati:**
+
+**Log tool chiamati:**{"ts":"2026-02-17T19:27:01.151Z","level":"info","event":"api_request","request_id":"95bd8916","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d11-a1b4-755a-9c0b-da09f9bbd285","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+Menu
+{"ts":"2026-02-17T19:27:01.629Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"95bd8916"}
+
+
+Test rifatto dopo deploy(patch):
+
+Risposte Receptionist:
+
+Log tool chiamati:
 
 ---
 
@@ -278,7 +290,7 @@ Menu
 
 **Precondizione:** Prenotazione attiva (da RA1).
 
-**Cliente dice:** "Ho una prenotazione per [giorno RA1] alle 20. Potrei spostarla alle 21?"
+**Cliente dice:** "Ho una prenotazione per [giovedi] alle 21:30. Potrei spostarla alle 21?"
 
 **Obiettivo:** list_bookings → identificare; check_openings(21:00); modify_booking. Verificare che Sheets E Calendar siano aggiornati.
 
@@ -286,9 +298,18 @@ Menu
 
 **Esito:**
 
-**Risposte receptionist:**
-
-**Log tool chiamati:**
+**Risposte receptionist:**1.Trovato una prenotazione per giovedì 19 febbraio alle 21.30 a nome Mauro. Vuole spostare questa prenotazione? - Cliente: Sì voglio spostarla alle 21.;
+2.La sua prenotazione è stata spostata con successo a giovedì 19 febbraio alle 21 Vuole che le invii un messaggio di conferma - Cliente: No grazie va bene lo stesso.
+3.Va bene, se bisogno di ulteriore assistenza non esiti a contattarmi. Buona serata,..
+ 
+**Log tool chiamati:**{"ts":"2026-02-17T19:31:08.581Z","level":"info","event":"api_request","request_id":"0d10dcc7","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d15-8b7a-711f-9ae4-23f1b9f7bf4e","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:31:09.082Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"0d10dcc7"}
+{"ts":"2026-02-17T19:31:28.391Z","level":"info","event":"api_request","request_id":"8f5d4dba","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d15-8b7a-711f-9ae4-23f1b9f7bf4e","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:31:28.784Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-19","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":2,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"8f5d4dba"}
+{"ts":"2026-02-17T19:31:28.784Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-19","closed":false,"openings_count":8,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"8f5d4dba"}
+{"ts":"2026-02-17T19:31:30.722Z","level":"info","event":"api_request","request_id":"201faffe","method":"POST","path":"/api/modify_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d15-8b7a-711f-9ae4-23f1b9f7bf4e","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+Menu
+{"ts":"2026-02-17T19:31:32.913Z","level":"info","event":"modify_booking_success","restaurant_id":"roma","booking_id":"06e53a7d-9d10-454f-bfd9-f29126c84f88","source":"vapi","request_id":"201faffe"}
 
 ---
 
@@ -302,9 +323,15 @@ Menu
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso aiutarla con questo. Prima però ho bisogno di verificare la sua prenotazione. Mi può confermare il numero di telefono utilizzato per la prenotazione? - Cliente:Sì, il numero è 3 4 9 2 6 7 4 6 8 8.; 2.Ho trovato una prenotazione prenotazione a nome Mauro per il giorno 19 febbraio alle 21 ma risulta per 2 persone. Vuole modificare questa prenotazione da 2 a 6 persone? - Cliente: Si; 3.La prenotazione è stata modificata con successo. Ora è per 6 persone il giorno 19 febbraio alle 21. Se bisogno di ulteriore assistenza, non esiti a chiedere. - Cliente: Va bene allora ciao...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-17T19:34:49.437Z","level":"info","event":"api_request","request_id":"7c3c7787","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d18-ace6-7ff2-b8ea-2815d632cf3c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:34:49.900Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"7c3c7787"}
+{"ts":"2026-02-17T19:35:08.827Z","level":"info","event":"api_request","request_id":"70e92abc","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d18-ace6-7ff2-b8ea-2815d632cf3c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:35:09.168Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-19","requested_time":"21:00","in_openings":true,"slot_exists":true,"active_bookings_count":2,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"70e92abc"}
+{"ts":"2026-02-17T19:35:09.171Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-19","closed":false,"openings_count":8,"requested_time":"21:00","available":true,"reason":null,"source":"vapi","request_id":"70e92abc"}
+{"ts":"2026-02-17T19:35:11.175Z","level":"info","event":"api_request","request_id":"557ea143","method":"POST","path":"/api/modify_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d18-ace6-7ff2-b8ea-2815d632cf3c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:35:12.659Z","level":"info","event":"modify_booking_success","restaurant_id":"roma","booking_id":"06e53a7d-9d10-454f-bfd9-f29126c84f88","source":"vapi","request_id":"557ea143"}
 
 ---
 
@@ -316,11 +343,18 @@ Menu
 
 **Tool attesi:** list_bookings, resolve_relative_day, check_openings (closed)
 
-**Esito:**
+**Esito:**Allora qui succede lo stesso errore di RC2, ovvero che chiedo di spostare la prenotazione a domenica ma lei la prenotazione che ho io la vede già per domenica anche se è per il giovedì 19 febbraio...
 
-**Risposte receptionist:**
+**Risposte receptionist:**1. Posso aiutarla con la modifica della prenotazione. Mi può fornire il numero di telefono utilizzato per la prenotazione? - Cliente: Sì, il numero è 3 4 9 2 6 7 4 6 8 8.;  2.Ho trovato una prenotazione a domenica 19 febbraio alle 21 per 6 persone a nome Mauro. Vuole modificare questa prenotazione? Se sì, mi può dire a che ora desidera spostarla. - Cliente:Voglio spostarla domenica.; 3.Mi scusi, ma ho bisogno di sapere a che ora desidera spostare la prenotazione. Di domenica. Puoi indicarmi l'orario esatto... *ho chiuso la chiamata
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-17T19:45:44.194Z","level":"info","event":"api_request","request_id":"14bf4720","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d22-b568-7225-b4ef-8beac7323b52","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:45:44.723Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"14bf4720"}
+
+Test rifatto dopo deploy(patch):
+
+Risposte Receptionist:
+
+Log tool chiamati:
 
 ---
 
@@ -336,11 +370,15 @@ Menu
 
 **Tool attesi:** list_bookings, cancel_booking
 
-**Esito:**
+**Esito:**Ha cancellato la prenotazione sia da sheets che calendar
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Posso aiutarla con questo. Mi conferma il numero di telefono che usato per la prenotazione o il giorno in cui effettuato la prenotazione. - Cliente: Sì il giorno è giovedì.; 2.Ho trovato una prenotazione per giovedì 19 febbraio alle 21 a nome Mauro. Vuole procedere con la cancellazione di questa prenotazione? - Cliente:si; 3.La prenotazione per giovedì 19 febbraio alle 21 è stata cancellata con successo. Posso aiutarla in altro modo? - Cliente:No, va bene così.; 4. Grazie, arrivederci.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-17T19:52:12.891Z","level":"info","event":"api_request","request_id":"23037de6","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d28-b65e-7bb2-9513-7bd24f84e30f","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:52:13.837Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["06e53a7d-9d10-454f-bfd9-f29126c84f88"],"source":"vapi","request_id":"23037de6"}
+{"ts":"2026-02-17T19:52:30.407Z","level":"info","event":"api_request","request_id":"f01fe7ad","method":"POST","path":"/api/cancel_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d28-b65e-7bb2-9513-7bd24f84e30f","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:52:31.892Z","level":"info","event":"sheets_delete_booking_row","restaurant_id":"roma","sheet_id":"1MnaSIGqhieZVnxtnw_lSC-Uz1wNzHbTWgWg8WC9s1Lk","tab":"Bookings","row":39,"booking_id":"06e53a7d-9d10-454f-bfd9-f29126c84f88"}
+{"ts":"2026-02-17T19:52:31.892Z","level":"info","event":"cancel_booking_success","restaurant_id":"roma","booking_id":"06e53a7d-9d10-454f-bfd9-f29126c84f88","source":"vapi","request_id":"f01fe7ad"}
 
 ---
 
@@ -354,9 +392,13 @@ Menu
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Non trovo prenotazioni con questo numero. Mi può confermare il numero usato o il giorno della prenotazione? - Cliente: Sì il giorno è il diciasette e il numero è 3 4 9 2 6 7 4 6 8 8.; 2.Non riesco ancora a trovare prenotazioni con il numero fornito. Mi può confermare il numero usato per la prenotazione o fornirmi un altro giorno? - Cliente: Allora vabbè sarà che mia moglie ha cancellato la prenotazione.; 3.Va bene, se bisogno di ulteriori informazioni o se desidera effettuare una nuova prenotazione non esiti a chiedere. Sono qui per aiutarla...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-17T19:55:33.023Z","level":"info","event":"api_request","request_id":"eeb50245","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d2b-f3ea-711f-9b0c-32ecf6ee9d3b","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:55:33.557Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":0,"booking_ids":[],"source":"vapi","request_id":"eeb50245"}
+{"ts":"2026-02-17T19:55:56.141Z","level":"info","event":"api_request","request_id":"5fbcd46c","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d2b-f3ea-711f-9b0c-32ecf6ee9d3b","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T19:55:56.462Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":0,"booking_ids":[],"source":"vapi","request_id":"5fbcd46c"}
+
 
 ---
 

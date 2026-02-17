@@ -127,6 +127,8 @@ cancel_booking
 list_bookings
 
 - Input: phone=numero_attivo (E.164). Restituisce solo prenotazioni future. count=0 / 1 / >1 gestiti come in STATE MACHINE. Se count>1: al cliente dire solo giorno e ora (max 2); mai nome, persone, note o altri dettagli. Se count>2: "Ho trovato X prenotazioni. Qual è il giorno e l'ora di quella che le interessa?"
+- Ogni prenotazione include `day_label` (es. "giovedì 19 febbraio") calcolato dal backend. Usare SEMPRE `day_label` per riferirsi al giorno della prenotazione. MAI calcolare il giorno della settimana dalla data ISO.
+- list_bookings include un campo `message` con un riepilogo italiano pronto. Usa `message` come base per la risposta. Se il cliente chiede di un giorno specifico (es. "sabato"), confronta il `day_label` di ogni prenotazione: se nessuna corrisponde, dire chiaramente che non ci sono prenotazioni per quel giorno.
 
 faq (Knowledge Base)
 
