@@ -1,5 +1,22 @@
 const reservations = require('../reservations');
 const logger = require('../logger');
+const { DateTime } = require('luxon');
+
+const ITALIAN_DAYS = {
+  monday: 'lunedì', tuesday: 'martedì', wednesday: 'mercoledì',
+  thursday: 'giovedì', friday: 'venerdì', saturday: 'sabato', sunday: 'domenica'
+};
+const ITALIAN_MONTHS = {
+  1: 'gennaio', 2: 'febbraio', 3: 'marzo', 4: 'aprile',
+  5: 'maggio', 6: 'giugno', 7: 'luglio', 8: 'agosto',
+  9: 'settembre', 10: 'ottobre', 11: 'novembre', 12: 'dicembre'
+};
+function buildDayLabel(dateISO) {
+  const dt = DateTime.fromISO(dateISO, { zone: 'Europe/Rome' });
+  if (!dt.isValid) return null;
+  const dow = ITALIAN_DAYS[dt.toFormat('cccc').toLowerCase()] || '';
+  return `${dow} ${dt.day} ${ITALIAN_MONTHS[dt.month] || ''}`.trim();
+}
 
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
@@ -143,6 +160,11 @@ module.exports = async function modifyBooking(req, res) {
       request_id: req.requestId || null,
     });
 
+
+    // Arricchisci con day_label
+    if (result && result.ok && result.day) {
+      result.day_label = buildDayLabel(result.day) || result.day;
+    }
 
     // Risposta per Vapi
     if (isVapi && toolCallId) {

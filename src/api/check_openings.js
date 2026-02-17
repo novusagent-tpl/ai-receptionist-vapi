@@ -17,6 +17,21 @@ const ITALIAN_DAYS = {
   thursday: 'giovedì', friday: 'venerdì', saturday: 'sabato', sunday: 'domenica'
 };
 
+const ITALIAN_MONTHS = {
+  1: 'gennaio', 2: 'febbraio', 3: 'marzo', 4: 'aprile',
+  5: 'maggio', 6: 'giugno', 7: 'luglio', 8: 'agosto',
+  9: 'settembre', 10: 'ottobre', 11: 'novembre', 12: 'dicembre'
+};
+
+function buildDayLabel(dateISO) {
+  const dt = DateTime.fromISO(dateISO, { zone: 'Europe/Rome' });
+  if (!dt.isValid) return null;
+  const dow = ITALIAN_DAYS[dt.toFormat('cccc').toLowerCase()] || '';
+  const dayNum = dt.day;
+  const month = ITALIAN_MONTHS[dt.month] || '';
+  return `${dow} ${dayNum} ${month}`.trim();
+}
+
 function findNextOpenDay(dayISO, openingsConfig, slotStep) {
   const base = DateTime.fromISO(dayISO, { zone: 'Europe/Rome' });
   for (let i = 1; i <= 7; i++) {
@@ -443,11 +458,15 @@ dayISO = dayStr;
         : 'Nessun tavolo disponibile a quest\'ora.';
     }
 
+    // day_label per il giorno richiesto
+    const dayLabel = buildDayLabel(dayISO) || dayISO;
+
     // --- RISPOSTA PER VAPI (formato tools) ---
     if (isVapi && toolCallId) {
       const payload = {
         restaurant_id: restaurantId,
         day: dayISO,
+        day_label: dayLabel,
         closed: result.closed,
         lunch_range: result.lunch_range || null,
         dinner_range: result.dinner_range || null,
@@ -477,6 +496,7 @@ dayISO = dayStr;
       ok: true,
       restaurant_id: restaurantId,
       day: dayISO,
+      day_label: dayLabel,
       closed: result.closed,
       slots: result.slots,
       lunch_range: result.lunch_range || null,

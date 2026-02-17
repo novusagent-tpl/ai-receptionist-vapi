@@ -1,6 +1,26 @@
 const logger = require('../logger');
 const { DateTime } = require('luxon');
 
+const ITALIAN_DAYS = {
+  monday: 'lunedì', tuesday: 'martedì', wednesday: 'mercoledì',
+  thursday: 'giovedì', friday: 'venerdì', saturday: 'sabato', sunday: 'domenica'
+};
+
+const ITALIAN_MONTHS = {
+  1: 'gennaio', 2: 'febbraio', 3: 'marzo', 4: 'aprile',
+  5: 'maggio', 6: 'giugno', 7: 'luglio', 8: 'agosto',
+  9: 'settembre', 10: 'ottobre', 11: 'novembre', 12: 'dicembre'
+};
+
+function buildDayLabel(dateISO) {
+  const dt = DateTime.fromISO(dateISO, { zone: 'Europe/Rome' });
+  if (!dt.isValid) return null;
+  const dow = ITALIAN_DAYS[dt.toFormat('cccc').toLowerCase()] || '';
+  const dayNum = dt.day;
+  const month = ITALIAN_MONTHS[dt.month] || '';
+  return `${dow} ${dayNum} ${month}`.trim();
+}
+
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
  * Restituisce: { isVapi, toolCallId, args }
@@ -214,13 +234,15 @@ module.exports = async function resolveRelativeDay(req, res) {
   const result = parseRelativeDay(text);
 
   if (result.ok) {
+    const dayLabel = buildDayLabel(result.date) || result.date;
+
     logger.info('resolve_relative_day_success', {
       ...logBase,
       text,
-      date: result.date
+      date: result.date,
+      day_label: dayLabel
     });
 
-    // Vapi: result deve essere stringa JSON
     if (isVapi && toolCallId) {
       return res.status(200).json({
         results: [
@@ -229,6 +251,7 @@ module.exports = async function resolveRelativeDay(req, res) {
             result: JSON.stringify({
               ok: true,
               date: result.date,
+              day_label: dayLabel,
               ambiguous: false
             })
           }
@@ -239,6 +262,7 @@ module.exports = async function resolveRelativeDay(req, res) {
     return res.status(200).json({
       ok: true,
       date: result.date,
+      day_label: dayLabel,
       ambiguous: false
     });
   }

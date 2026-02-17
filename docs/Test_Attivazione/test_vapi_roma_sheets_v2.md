@@ -278,9 +278,10 @@ Menu
 
 Test rifatto dopo deploy(patch):
 
-Risposte Receptionist:
+Risposte Receptionist: Cliente: Ciao Alice vorrei sapere se ho qualche prenota per sabato. 1.Non trovo prenotazioni per sabato. Ho trovato una prenotazione per giovedì 19 febbraio alle ventuno:trenta per 2 persone a nome Mauro. Vuole fare qualcosa riguardo a questa prenotazione? - Cliente:No allora va bene così, grazie.; 2.Ciao, grazie a te. Se hai bisogno di ulteriore aiuto non esitare a contattarmi.
 
-Log tool chiamati:
+Log tool chiamati:{"ts":"2026-02-17T20:38:32.200Z","level":"info","event":"api_request","request_id":"73f3d445","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d53-4aaa-7000-826b-886323b10752","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T20:38:32.607Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["4d35fee9-9bb3-47fe-b65c-3f526539bd62"],"source":"vapi","request_id":"73f3d445"}
 
 ---
 
@@ -352,9 +353,15 @@ Menu
 
 Test rifatto dopo deploy(patch):
 
-Risposte Receptionist:
+Risposte Receptionist: Cliente:Salve posso spostare la prenotazione a domenica.; 1.Posso aiutarla con la modifica della prenotazione. Mi può confermare il numero di telefono che usato per la prenotazione? - Cliente: Sì, numero è 3 4 9 2 6 7 4 6 8 8.; 2.Ho trovato una prenotazione per giovedì 19 febbraio alle 21.30 per 2 persone a nome Mauro. Mi può confermare se desidera spostare questa prenotazione a domenica. - Cliente:Sì voglio spostarla domenica.; 3.Purtroppo il ristorante è chiuso domenica. Riapriamo lunedì con cena dalle 19 alle 22.30 Vuole spostare la prenotazione a lunedì alle 21.30 - Cliente: No va bene, grazie, ciao.; 4.Ciao, se bisogno di ulteriore aiuto non esiti a contattarmi. Buona serata!
 
-Log tool chiamati:
+Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_request","request_id":"d5a61586","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d56-cf96-7ff5-8241-93daaba87771","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T20:42:36.723Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":1,"booking_ids":["4d35fee9-9bb3-47fe-b65c-3f526539bd62"],"source":"vapi","request_id":"d5a61586"}
+{"ts":"2026-02-17T20:42:55.822Z","level":"info","event":"api_request","request_id":"5bf2c1a6","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d56-cf96-7ff5-8241-93daaba87771","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T20:42:55.825Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"5bf2c1a6","text":"domenica","date":"2026-02-22"}
+{"ts":"2026-02-17T20:42:56.719Z","level":"info","event":"api_request","request_id":"dfdfdbae","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c6d56-cf96-7ff5-8241-93daaba87771","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-17T20:42:56.721Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-22","requested_time":"21:30","in_openings":false,"slot_exists":false,"active_bookings_count":null,"max_concurrent_bookings":null,"avg_stay_minutes":null,"available":false,"reason":"closed","nearest_slots_count":0,"source":"vapi","request_id":"dfdfdbae"}
+{"ts":"2026-02-17T20:42:56.721Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-22","closed":true,"openings_count":0,"requested_time":"21:30","available":false,"reason":"closed","source":"vapi","request_id":"dfdfdbae"}
 
 ---
 
