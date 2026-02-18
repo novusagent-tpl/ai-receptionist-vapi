@@ -66,6 +66,7 @@ module.exports = async function checkOpenings(req, res) {
   let restaurantId = null;
   let dayISO = null;
   let requestedTime = null;
+  let expectedWeekday = null;
 
   let isVapi = false;
   let toolCallId = null;
@@ -92,12 +93,14 @@ module.exports = async function checkOpenings(req, res) {
         restaurantId = args.restaurant_id;
         dayISO = args.day || args.date;
         requestedTime = args.time || null;
+        expectedWeekday = args.expected_weekday || null;
       }
     } else {
       // --- CHIAMATA "NORMALE" (Postman, ecc.) ---
       restaurantId = body.restaurant_id;
       dayISO = body.day || body.date;
       requestedTime = body.time || null;
+      expectedWeekday = body.expected_weekday || null;
     }
 
     // normalize requestedTime (se presente)
@@ -187,6 +190,58 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(dayStr)) {
 
 dayISO = dayStr;
 
+    // --- WEEKDAY_MISMATCH: guardrail backend ---
+    if (expectedWeekday) {
+      const ewNorm = String(expectedWeekday).trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const WEEKDAY_TO_LUXON = {
+        lunedi: 1, martedi: 2, mercoledi: 3, giovedi: 4,
+        venerdi: 5, sabato: 6, domenica: 7
+      };
+      const expectedLuxon = WEEKDAY_TO_LUXON[ewNorm];
+      if (expectedLuxon) {
+        const dayDt = DateTime.fromISO(dayISO, { zone: 'Europe/Rome' });
+        if (dayDt.isValid && dayDt.weekday !== expectedLuxon) {
+          const actualLabel = buildDayLabel(dayISO);
+          const expectedIt = {
+            1: 'lunedì', 2: 'martedì', 3: 'mercoledì', 4: 'giovedì',
+            5: 'venerdì', 6: 'sabato', 7: 'domenica'
+          }[expectedLuxon];
+
+          // Calcola la data corretta per il weekday richiesto
+          const now = DateTime.now().setZone('Europe/Rome').startOf('day');
+          let delta = (expectedLuxon - now.weekday + 7) % 7;
+          if (delta === 0) delta = 7;
+          const correctedDt = now.plus({ days: delta });
+          const correctedISO = correctedDt.toISODate();
+          const correctedLabel = buildDayLabel(correctedISO);
+
+          logger.warn('check_openings_weekday_mismatch', {
+            ...logBase,
+            expected_weekday: expectedIt,
+            actual_day_label: actualLabel,
+            corrected_day: correctedISO,
+            corrected_day_label: correctedLabel,
+          });
+
+          const mismatchMsg = `La data ${dayISO} è ${actualLabel}, non ${expectedIt}. Il prossimo ${expectedIt} è ${correctedLabel}.`;
+          const mismatchPayload = {
+            ok: false,
+            error_code: 'WEEKDAY_MISMATCH',
+            message: mismatchMsg,
+            corrected_day: correctedISO,
+            corrected_day_label: correctedLabel,
+          };
+
+          if (isVapi && toolCallId) {
+            return res.status(200).json({
+              results: [{ toolCallId, result: JSON.stringify(mismatchPayload) }]
+            });
+          }
+          return res.status(200).json(mismatchPayload);
+        }
+      }
+    }
 
     // --- VALIDAZIONE time (opzionale) ---
     if (requestedTime) {
