@@ -53,10 +53,19 @@ function findNextOpenDay(dayISO, openingsConfig, slotStep) {
   return null;
 }
 
+function formatTimeHuman(hhmm) {
+  if (!hhmm) return hhmm;
+  const parts = String(hhmm).split(':');
+  const h = Number(parts[0]);
+  const m = Number(parts[1] || 0);
+  if (m === 0) return String(h);
+  return `${h} e ${String(m).padStart(2, '0')}`;
+}
+
 function formatRangesText(lunchRange, dinnerRange) {
   const parts = [];
-  if (lunchRange) parts.push(`pranzo dalle ${lunchRange[0]} alle ${lunchRange[1]}`);
-  if (dinnerRange) parts.push(`cena dalle ${dinnerRange[0]} alle ${dinnerRange[1]}`);
+  if (lunchRange) parts.push(`pranzo dalle ${formatTimeHuman(lunchRange[0])} alle ${formatTimeHuman(lunchRange[1])}`);
+  if (dinnerRange) parts.push(`cena dalle ${formatTimeHuman(dinnerRange[0])} alle ${formatTimeHuman(dinnerRange[1])}`);
   return parts.join(' e ');
 }
 
@@ -487,8 +496,14 @@ dayISO = dayStr;
       message = `Il ristorante è chiuso ${dowIt}.`;
       if (nextOpen) {
         const rangesTxt = [];
-        if (nextOpen.next_open_ranges.lunch) rangesTxt.push(`pranzo dalle ${nextOpen.next_open_ranges.lunch.replace('–', ' alle ')}`);
-        if (nextOpen.next_open_ranges.dinner) rangesTxt.push(`cena dalle ${nextOpen.next_open_ranges.dinner.replace('–', ' alle ')}`);
+        if (nextOpen.next_open_ranges.lunch) {
+          const [l0, l1] = nextOpen.next_open_ranges.lunch.split('–');
+          rangesTxt.push(`pranzo dalle ${formatTimeHuman(l0)} alle ${formatTimeHuman(l1)}`);
+        }
+        if (nextOpen.next_open_ranges.dinner) {
+          const [d0, d1] = nextOpen.next_open_ranges.dinner.split('–');
+          rangesTxt.push(`cena dalle ${formatTimeHuman(d0)} alle ${formatTimeHuman(d1)}`);
+        }
         message += ` Il prossimo giorno di apertura è ${nextOpen.next_open_day_label} con ${rangesTxt.join(' e ')}.`;
       }
     } else if (!requestedTime) {
@@ -497,17 +512,17 @@ dayISO = dayStr;
     } else if (available === true) {
       message = 'Disponibile.';
     } else if (reason === 'not_in_openings') {
-      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.map(s => formatTimeHuman(s)).join(', ') : '';
       message = nearTxt
         ? `Questo orario non è disponibile per prenotazioni. Orari più vicini: ${nearTxt}.`
         : 'Questo orario non è disponibile per prenotazioni.';
     } else if (reason === 'cutoff') {
-      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.map(s => formatTimeHuman(s)).join(', ') : '';
       message = nearTxt
         ? `Questo orario è troppo vicino alla chiusura. Orari più vicini: ${nearTxt}.`
         : 'Questo orario è troppo vicino alla chiusura.';
     } else if (reason === 'full') {
-      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.join(', ') : '';
+      const nearTxt = Array.isArray(nearest) && nearest.length > 0 ? nearest.map(s => formatTimeHuman(s)).join(', ') : '';
       message = nearTxt
         ? `Nessun tavolo disponibile a quest'ora. Orari più vicini: ${nearTxt}.`
         : 'Nessun tavolo disponibile a quest\'ora.';
@@ -526,9 +541,13 @@ dayISO = dayStr;
         lunch_range: result.lunch_range || null,
         dinner_range: result.dinner_range || null,
         requested_time: requestedTime || null,
+        time_human: requestedTime ? formatTimeHuman(requestedTime) : null,
         available,
         reason,
         nearest_slots: nearest,
+        nearest_slots_human: Array.isArray(nearest) && nearest.length > 0
+          ? nearest.map(s => formatTimeHuman(s))
+          : null,
         max_people: maxPeople,
         message
       };

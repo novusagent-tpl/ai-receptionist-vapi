@@ -121,6 +121,34 @@ function parseRelativeTime(textRaw) {
     }
   }
 
+  // "20 e 30", "19 e 45", "alle 21 e 15"
+  const absEY = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2})\s+e\s+(\d{1,2})$/);
+  if (absEY) {
+    const hh = Number(absEY[1]);
+    const mm = Number(absEY[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return { ok: true, time: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}` };
+    }
+  }
+
+  // "20 e mezza" / "20 e mezzo" → 20:30
+  const absHalf = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2})\s+e\s+mezz[ao]$/);
+  if (absHalf) {
+    const hh = Number(absHalf[1]);
+    if (hh >= 0 && hh <= 23) {
+      return { ok: true, time: `${String(hh).padStart(2, '0')}:30` };
+    }
+  }
+
+  // "20 e un quarto" → 20:15
+  const absQuarter = tNoAcc.match(/^(?:alle?\s+)?(\d{1,2})\s+e\s+un\s+quarto$/);
+  if (absQuarter) {
+    const hh = Number(absQuarter[1]);
+    if (hh >= 0 && hh <= 23) {
+      return { ok: true, time: `${String(hh).padStart(2, '0')}:15` };
+    }
+  }
+
   // Casi vaghi → NON supportati
   if (
     /\bverso\b/.test(tNoAcc) ||

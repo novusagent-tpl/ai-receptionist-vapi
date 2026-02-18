@@ -421,9 +421,9 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Non abbiamo un parcheggio privato, ma ci sono posti auto disponibili nelle vie vicine al ristorante. Posso aiutarla con qualcos'altro - Cliente:No volevo sapere solo questo.; 2.Va bene, grazie per avermi contattato. Arrivederci...
 
-**Log tool chiamati:**
+**Log tool chiamati:**Qui non ci sono tool chiamati al nostro server, fa tutto dentro vapi visto che il faq e dentro la knowledge base del assistente
 
 ---
 
@@ -437,9 +437,9 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Ciao, io avevo un dubbio e volevo sapere una cosa.; 1.Ciao, qual è il suo dubbio? Sarò felice di aiutarla. - Cliente: Allora volevo sapere se fate catering per eventi.; 2.Non ho questa informazione disponibile riguardo al catering per eventi. Può contattare direttamente il ristorante per verificare. Posso aiutarla con qualcos'altro? - Cliente:E perché non sa rispondere; 3.Mi dispiace, non ho accesso a tutte le informazioni specifiche sul catering, posso solo fornire informazioni generali e orari. Se desidera posso aiutarla con prenotazioni o altre domande. Vuole che la metto in contatto.... * ho chiuso la chimata
 
-**Log tool chiamati:**
+**Log tool chiamati:**Qui non ci sono tool chiamati al nostro server, fa tutto dentro vapi visto che il faq e dentro la knowledge base del assistente
 
 ---
 
@@ -455,9 +455,10 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Il ristorante è chiuso in questo momento. Riapriamo alle 19. Posso aiutarla con qualcos'altro? - Cliente:No va bene così ciao.; *Ho chiuso la chiamata
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T12:44:34.912Z","level":"info","event":"api_request","request_id":"c03bd850","method":"POST","path":"/api/is_open_now","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70c7-c870-7000-808a-4e10617faf1f","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T12:44:34.914Z","level":"info","event":"is_open_now","restaurant_id":"roma","aperto_ora":false,"prossima_apertura":"19:00"}
 
 ---
 
@@ -469,11 +470,14 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** resolve_relative_day, check_openings
 
-**Esito:**
+**Esito:**Allora qui e successa una cosa strana nella prima chiamata ho osservato che qualcosa non è andato bene e quando sono andato su vapi in call logs questa è stata la conversazione: Cliente: Ciao, ciao Raprite venerdì.(qui ha capito sbagliato) 1.Il ristorante è chiuso venerdì, riapriamo sabato. Posso aiutarla con qualcos'altro? - Cliente: Quindi siete siete chiusi venerdì?; 2.Sì, esatto. Il ristorante è chiuso venerdì Riapriamo sabato. Posso aiutarla con qualcos'altro? - *perché ha risposto cosi anche se ha capito male e il stt ha trascritto male, e inoltre non ha chiamato nessun tool, ha risposto cosi a caso. Poi ho rifatto la chiamata e guarda sotto com'è andata, ha capito bene e ha anche risposto bene: 
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Ciao, a che ora aprite venerdì?; 1.Siamo aperti. Venerdì 20 febbraio a pranzo. Dalle dodici:trenta alle 14. 30 e a cena dalle 19 alle 23. A che ora preferisce? - Cliente:Volevo sapere solo questo. Grazie.; 2.Prego, se bisogno di ulteriore assistenza non esiti a contattarmi. Arrivederci...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T12:48:36.454Z","level":"info","event":"api_request","request_id":"ea38ebaf","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70cb-745b-7444-bcea-d572bc5ff069","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T12:48:36.458Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"ea38ebaf","text":"venerdì","date":"2026-02-20","day_label":"venerdì 20 febbraio"}
+{"ts":"2026-02-18T12:48:38.545Z","level":"info","event":"api_request","request_id":"2972111c","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70cb-745b-7444-bcea-d572bc5ff069","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T12:48:38.550Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-20","closed":false,"openings_count":14,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"2972111c"}
 
 ---
 
@@ -485,11 +489,14 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** resolve_relative_day, check_openings
 
-**Esito:**
+**Esito:**Anche qui non ha risposto bene dal kb e successa una cosa strana...perché cavolo succedono ste cose se abbiamo provato a migliorare tutto grazie al backend, in ogni test scopriamo che qualcosa di nuovo non va, se dobbiamo fare centinaia di test per provare ogni tipo di caso non è utiole per niente questo sistema e non funziona per niente allora prima quando decideva tutto l'ai forse andava meglio... un sistema del genere non può essere implementato in un risotrante reale se funzionera in questo modo. Deve essere sempre coretto il sistema e funzionare bene..
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Salve vorrei sapere se siete aperti domenica.; 1.Siamo aperti domenica a cena dalle 19 alle 22.30. A che ora preferisce? - Cliente: Quindi alle 19 aprile.; 2.Mi scusi, ma l'orario che mi indicato è già passato. Può scegliere un orario più avanti, - Cliente:Volevo sapere se siete aperti domenica.; 3.Siamo aperti domenica a cena dalle 19 alle 20 A che ora preferisce? - Cliente: Allora va bene ciao.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T12:54:24.216Z","level":"info","event":"api_request","request_id":"520a8e1a","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d0-c2a1-7bb0-aae3-b6b1f2f807ef","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T12:54:24.218Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-19","closed":false,"openings_count":8,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"520a8e1a"}
+
+Inoltre se ti può servire quando ha chiamato il tool check_openings in vapi questa è al response che ha ricevuto: {"restaurant_id":"roma","day":"2026-02-19","day_label":"giovedì 19 febbraio","closed":false,"lunch_range":null,"dinner_range":["19:00","22:30"],"requested_time":null,"available":null,"reason":null,"nearest_slots":null,"max_people":8,"message":"Orari di apertura: cena dalle 19:00 alle 22:30."}
 
 ---
 
@@ -503,11 +510,25 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** resolve_relative_day, check_openings, create_booking
 
-**Esito:**
+**Esito:**Questo caso secondo me è stato utile perché avvevo gia una prenotazione con lo stesso numero per stasera quindi abbiamo controllato anche il duplicate_booking, però per sicurezza controlla anche tu ongi risposta e ogni log?
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Salve vorrei prenotare per stasera alle 20 per 2 persone.; 1.Per stasera, mercoledì 18 febbraio, alle 20 abbiamo disponibilità Per confermare la prenotazione mi serve il suo nome e il numero di telefono. - Cliente: Sì mi chiamo Giancarlo Esposito. E il numero di telefono è questo da cui chiamo.; 2.Risulta già una prenotazione per stasera? Mercoledì 18 febbraio alle 20 a nome Conte. Vuole modificare questa prenotazione o verificare I dettagli? - Cliente: Allora cambiamo numero, usiamo un altro numero.; 3.Mi fornisca il nuovo numero di telefono per favore. - Cliente: Allora 3 4 9 2 6 6 4 6 32.; 3.La prenotazione per stasera, mercoledì 18 febbraio, alle 20 per 2 persone a nome, Giancarlo Esposito è stata confermata Se bisogno di ulteriore assistenza, sono qui per aiutarla. - Cliente: Va bene grazie ciao...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T13:01:07.540Z","level":"info","event":"api_request","request_id":"4efacdf5","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:01:07.541Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"4efacdf5","text":"stasera","date":"2026-02-18","day_label":"mercoledì 18 febbraio"}
+{"ts":"2026-02-18T13:01:07.914Z","level":"info","event":"api_request","request_id":"9ca7fe6d","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:01:07.915Z","level":"info","event":"resolve_relative_time_success","restaurant_id":"roma","source":"vapi","request_id":"9ca7fe6d","text":"20","ok":true,"time":"20:00"}
+{"ts":"2026-02-18T13:01:08.927Z","level":"info","event":"api_request","request_id":"967eef8f","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:01:09.916Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-18","requested_time":"20:00","in_openings":true,"slot_exists":true,"active_bookings_count":1,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"967eef8f"}
+{"ts":"2026-02-18T13:01:09.916Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-18","closed":false,"openings_count":8,"requested_time":"20:00","available":true,"reason":null,"source":"vapi","request_id":"967eef8f"}
+{"ts":"2026-02-18T13:01:31.300Z","level":"info","event":"api_request","request_id":"e3442a72","method":"POST","path":"/api/create_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:01:32.165Z","level":"warn","event":"sheets_duplicate_booking_blocked","restaurant_id":"roma","day":"2026-02-18","time":"20:00","phone":"+39XXX...688","existing_booking_id":"69dd9797-253c-4470-84d5-2fca717f62dd"}
+{"ts":"2026-02-18T13:01:32.165Z","level":"info","event":"create_booking_success","restaurant_id":"roma","day":"2026-02-18","time":"20:00","people":2,"phone":"+39XXX...688","source":"vapi","request_id":"e3442a72"}
+{"ts":"2026-02-18T13:01:33.089Z","level":"info","event":"api_request","request_id":"edc70dba","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:01:33.410Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":2,"booking_ids":["4d35fee9-9bb3-47fe-b65c-3f526539bd62","69dd9797-253c-4470-84d5-2fca717f62dd"],"source":"vapi","request_id":"edc70dba"}
+{"ts":"2026-02-18T13:02:07.639Z","level":"info","event":"api_request","request_id":"557b951c","method":"POST","path":"/api/create_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70d6-e365-7ff7-914a-2a6ba2632419","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:02:12.153Z","level":"info","event":"sheets_write_booking_row","restaurant_id":"roma","sheet_id":"1MnaSIGqhieZVnxtnw_lSC-Uz1wNzHbTWgWg8WC9s1Lk","tab":"Bookings","row":41,"booking_id":"cbabadd3-e352-4731-a921-02e9322de53a"}
+{"ts":"2026-02-18T13:02:12.153Z","level":"info","event":"create_booking_success","restaurant_id":"roma","day":"2026-02-18","time":"20:00","people":2,"phone":"+39XXX...632","booking_id":"cbabadd3-e352-4731-a921-02e9322de53a","source":"vapi","request_id":"557b951c"}
 
 ---
 
@@ -525,11 +546,26 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 - [ ] Anno MAI menzionato
 - [ ] Nessuna parola in inglese
 
-**Esito:**
+**Esito:**Da quello che ho osservato ha letto le date e i numeri in italiano e correttamente però ci sono comunque casi che ho osservato priam dove leggeva il numero tipo 22.30 in inglese perché non ho cambiato la voce di 11labs che è in più lingue non solo in italiano..
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Ho prenotato un tavolo per 4 persone a nome Giulia per sabato 21 febbraio alle 20.30. Se bisogno di ulteriore assistenza, sono qui per aiutarla. - Cliente:Va bene allora che numero ho usato?; 2.Utilizzato il numero Plus 3 9 3 4 9 2 6 7 4 6 8 8. Per le sue prenotazioni. Se hai bisogno di ulteriori informazioni, non esiti a chiedere. - Cliente: Va bene allora ciao.
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T13:10:29.552Z","level":"info","event":"api_request","request_id":"d00af25a","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:10:29.553Z","level":"info","event":"resolve_relative_time_error","restaurant_id":"roma","source":"vapi","request_id":"d00af25a","text":"20 e 30","error_code":"UNSUPPORTED_RELATIVE_TIME","error_message":"Espressione orario non riconosciuta."}
+{"ts":"2026-02-18T13:10:29.557Z","level":"info","event":"api_request","request_id":"2ac321d2","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:10:29.558Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"2ac321d2","text":"sabato","date":"2026-02-21","day_label":"sabato 21 febbraio"}
+{"ts":"2026-02-18T13:10:30.574Z","level":"info","event":"api_request","request_id":"9837df85","method":"POST","path":"/api/resolve_relative_time","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:10:30.574Z","level":"info","event":"resolve_relative_time_success","restaurant_id":"roma","source":"vapi","request_id":"9837df85","text":"20:30","ok":true,"time":"20:30"}
+{"ts":"2026-02-18T13:10:31.661Z","level":"info","event":"api_request","request_id":"4658c234","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:10:32.697Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-21","requested_time":"20:30","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"4658c234"}
+{"ts":"2026-02-18T13:10:32.699Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-21","closed":false,"openings_count":14,"requested_time":"20:30","available":true,"reason":null,"source":"vapi","request_id":"4658c234"}
+{"ts":"2026-02-18T13:10:36.207Z","level":"info","event":"api_request","request_id":"6afc6cb9","method":"POST","path":"/api/create_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:10:40.015Z","level":"info","event":"sheets_write_booking_row","restaurant_id":"roma","sheet_id":"1MnaSIGqhieZVnxtnw_lSC-Uz1wNzHbTWgWg8WC9s1Lk","tab":"Bookings","row":42,"booking_id":"609f97b3-edf7-4027-ac99-83d4ba296ffc"}
+{"ts":"2026-02-18T13:10:40.015Z","level":"info","event":"create_booking_success","restaurant_id":"roma","day":"2026-02-21","time":"20:30","people":4,"phone":"+39XXX...688","booking_id":"609f97b3-edf7-4027-ac99-83d4ba296ffc","source":"vapi","request_id":"6afc6cb9"}
+{"ts":"2026-02-18T13:11:01.597Z","level":"info","event":"api_request","request_id":"16f57499","method":"POST","path":"/api/list_bookings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70df-6c22-7006-8d58-cf6cc12b3bcf","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:11:02.438Z","level":"info","event":"list_bookings_success","restaurant_id":"roma","phone":"+39XXX...688","count":3,"booking_ids":["4d35fee9-9bb3-47fe-b65c-3f526539bd62","69dd9797-253c-4470-84d5-2fca717f62dd","609f97b3-edf7-4027-ac99-83d4ba296ffc"],"source":"vapi","request_id":"16f57499"}
+Menu
+
 
 ---
 
@@ -545,9 +581,13 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Esito:**
 
-**Risposte receptionist:**
+**Risposte receptionist:**1.Oggi siamo aperti. Ma non possiamo accettare prenotazioni alle 16. Gli orari più vicini disponibili sono alle 19 e alle 19.30. Vuole prenotare per uno di questi orari? - Cliente: Sì va bene allora.; 2.Preferisce prenotare per le 19 o per le 19.30? - Cliente: Le 19.30.; 3.Quante persone desidera prenotare?... - *Ho chiuso la chiamata
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T13:22:25.904Z","level":"info","event":"api_request","request_id":"b5781416","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70ea-65c6-7338-9ed0-d9214005362b","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:22:25.905Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"b5781416","text":"oggi","date":"2026-02-18","day_label":"mercoledì 18 febbraio"}
+{"ts":"2026-02-18T13:22:27.290Z","level":"info","event":"api_request","request_id":"658afb40","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70ea-65c6-7338-9ed0-d9214005362b","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:22:28.433Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-18","requested_time":"16:00","in_openings":false,"slot_exists":false,"active_bookings_count":null,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":false,"reason":"not_in_openings","nearest_slots_count":2,"source":"vapi","request_id":"658afb40"}
+{"ts":"2026-02-18T13:22:28.433Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-18","closed":false,"openings_count":8,"requested_time":"16:00","available":false,"reason":"not_in_openings","source":"vapi","request_id":"658afb40"}
 
 ---
 
@@ -559,7 +599,7 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** endCall
 
-**Esito:**
+**Esito:**Si funziona
 
 **Risposte receptionist:**
 
@@ -577,11 +617,12 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** is_open_now, transfer_call_tool
 
-**Esito:**
+**Esito:** Se il ristorante è aperto fa il transfer, l'ho già provato ieri.
 
-**Risposte receptionist:**
+**Risposte receptionist:**Cliente: Vorrei parlare con qualcuno del ristorante.; 1.Il ristorante è chiuso al momento. E riaprirà alle 19. Posso aiutarla io con prenotazioni o informazioni. - Cliente: Allora va bene grazie, ci sarò più tardi.; 2.A presto. Se hai bisogno non esiti a contattarmi. - Va bene ciao...
 
-**Log tool chiamati:**
+**Log tool chiamati:**{"ts":"2026-02-18T13:27:03.928Z","level":"info","event":"api_request","request_id":"7f211590","method":"POST","path":"/api/is_open_now","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c70ee-818b-766e-9ed4-da457996817a","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T13:27:03.929Z","level":"info","event":"is_open_now","restaurant_id":"roma","aperto_ora":false,"prossima_apertura":"19:00"}
 
 ---
 
@@ -593,7 +634,7 @@ Log tool chiamati:{"ts":"2026-02-17T20:42:36.199Z","level":"info","event":"api_r
 
 **Tool attesi:** is_open_now
 
-**Esito:**
+**Esito:**Funziona, il test è uguale a quello di RJ1
 
 **Risposte receptionist:**
 
