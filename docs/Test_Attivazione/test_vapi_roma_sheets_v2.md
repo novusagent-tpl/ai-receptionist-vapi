@@ -642,6 +642,91 @@ Menu
 
 ---
 
+
+
+
+
+TEST RIFATTI DOPO ULTIMA PATCH - Test RG3, RH2, RG2:
+
+### RG3. Giorno chiuso — solo orari
+
+**Cliente dice:** "Siete aperti domenica?"
+
+**Obiettivo:** check_openings → closed=true, reason="closed", next_open_day. Dire che domenica e chiuso e proporre prossimo giorno aperto.
+
+**Tool attesi:** resolve_relative_day, check_openings
+
+**Esito:**
+
+**Risposte receptionist:**1.Quel giorno siamo chiusi. Riapriamo lunedì 23 febbraio con cena dalle 19 alle 22.30. Posso aiutarla con qualcos'altro? - Cliente:Va bene così, ciao.
+
+**Log tool chiamati:Vapi- 1. Resolve Relative Day. 2.Check Openings: {"restaurant_id":"roma","day":"2026-02-22","day_label":"domenica 22 febbraio","closed":true,"lunch_range":null,"dinner_range":null,"requested_time":null,"time_human":null,"available":null,"reason":null,"nearest_slots":null,"nearest_slots_human":null,"max_people":8,"message":"Il ristorante è chiuso domenica. Il prossimo giorno di apertura è lunedì con cena dalle 19 alle 22 e 30.","next_open_day":"2026-02-23","next_open_day_label":"lunedì","next_open_ranges":{"lunch":null,"dinner":"19:00–22:30"}}
+
+Render: {"ts":"2026-02-18T15:24:08.614Z","level":"info","event":"api_request","request_id":"0a27adcf","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c7159-dbc7-755f-bac2-d12efe716087","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:24:09.006Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"0a27adcf","text":"domenica","date":"2026-02-22","day_label":"domenica 22 febbraio"}
+{"ts":"2026-02-18T15:24:10.086Z","level":"info","event":"api_request","request_id":"34d451da","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c7159-dbc7-755f-bac2-d12efe716087","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:24:10.089Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-22","closed":true,"openings_count":0,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"34d451da"}
+
+--
+
+### RH2. Orari in italiano (non inglese)
+
+**Cliente dice:** "Vorrei prenotare per sabato alle 20 e 30 per 4 persone, nome Giulia."
+
+**Obiettivo:** Verificare che la conferma sia in italiano parlato ("alle venti e trenta", "sabato 15 febbraio"), MAI "8:30 PM", MAI "February 15", MAI "2026".
+
+**Tool attesi:** resolve_relative_day, check_openings, create_booking
+
+**Cosa controllare nella risposta:**
+- [ ] Data in italiano ("sabato 15 febbraio"), no inglese
+- [ ] Orario parlato ("alle venti e trenta"), no "20:30" o "8:30 PM"
+- [ ] Anno MAI menzionato
+- [ ] Nessuna parola in inglese
+
+**Esito:**L'unica cosa qui che ho osservato io che non va bene e che ha letto l'orario 20.30 di nuovo in inglese come twenty point three zero, perché nonha letto in italiano se abbiamo fatto qualla patch. Forse e solo un problema di voice da 11labs o si può risolvere ?
+
+**Risposte receptionist:**1.Per sabato 21 febbraio alle 20.30 abbiamo disponibilità per 4 persone a nome Giulia, posso procedere con la prenotazione? - Cliente: Certo.; 2.Mi serve solo il numero di telefono per completare la prenotazione. Qual è il numero? - Cliente: Il numero è 3 4 9 2 6 7 4 6 8 8.; 3.La prenotazione per 4 persone a nome Giulia è stata confermata per sabato 21 febbraio alle 20 point 3 0 Se bisogno di ulteriore assistenza, non esiti a chiedere. - Cliente: Va bene ciao...
+
+**Log tool chiamati:Vapi-1.Resolve relative Day; 2.Check Openings:{"restaurant_id":"roma","day":"2026-02-21","day_label":"sabato 21 febbraio","closed":false,"lunch_range":["12:30","14:30"],"dinner_range":["19:00","23:00"],"requested_time":"20:30","time_human":"20 e 30","available":true,"reason":null,"nearest_slots":[],"nearest_slots_human":null,"max_people":8,"message":"Disponibile."} ;
+3.Create Booking: {"ok":true,"booking_id":"bbf66563-bf8b-44e0-91fc-c2a64c644716","day":"2026-02-21","time":"20:30","people":4,"name":"Giulia","phone":"+393492674688","notes":null,"event_id":"b1rhj75eo4v0t55624jqn5fans","day_label":"sabato 21 febbraio"};
+4.End Call
+
+Render:{"ts":"2026-02-18T15:30:53.944Z","level":"info","event":"api_request","request_id":"c1f0fa5b","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c715f-f7c3-7006-8e28-b4160bc52d0c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:30:53.945Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"c1f0fa5b","text":"sabato","date":"2026-02-21","day_label":"sabato 21 febbraio"}
+{"ts":"2026-02-18T15:30:56.986Z","level":"info","event":"api_request","request_id":"8684d808","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c715f-f7c3-7006-8e28-b4160bc52d0c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:30:58.132Z","level":"info","event":"capacity_check_success","restaurant_id":"roma","day":"2026-02-21","requested_time":"20:30","in_openings":true,"slot_exists":true,"active_bookings_count":0,"max_concurrent_bookings":3,"avg_stay_minutes":60,"available":true,"reason":null,"nearest_slots_count":0,"source":"vapi","request_id":"8684d808"}
+{"ts":"2026-02-18T15:30:58.133Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-21","closed":false,"openings_count":14,"requested_time":"20:30","available":true,"reason":null,"source":"vapi","request_id":"8684d808"}
+{"ts":"2026-02-18T15:31:27.582Z","level":"info","event":"api_request","request_id":"1857aefc","method":"POST","path":"/api/create_booking","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c715f-f7c3-7006-8e28-b4160bc52d0c","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:31:31.012Z","level":"info","event":"sheets_write_booking_row","restaurant_id":"roma","sheet_id":"1MnaSIGqhieZVnxtnw_lSC-Uz1wNzHbTWgWg8WC9s1Lk","tab":"Bookings","row":42,"booking_id":"bbf66563-bf8b-44e0-91fc-c2a64c644716"}
+{"ts":"2026-02-18T15:31:31.013Z","level":"info","event":"create_booking_success","restaurant_id":"roma","day":"2026-02-21","time":"20:30","people":4,"phone":"+39XXX...688","booking_id":"bbf66563-bf8b-44e0-91fc-c2a64c644716","source":"vapi","request_id":"1857aefc"}
+
+
+--
+
+### RG2. "A che ora aprite venerdi?"
+
+**Cliente dice:** "A che ora aprite venerdi?"
+
+**Obiettivo:** Venerdi Roma ha pranzo + cena. Comunicare entrambe le fasce.
+
+**Tool attesi:** resolve_relative_day, check_openings
+
+**Esito:**Poi perché legge ancora con ":" se ho fatto l'upload, provo a rifarlo di nuovo? In chiamata mi sa che l'ha detto bene però perchè c'è ancora ":"
+
+**Risposte receptionist:**1.Siamo aperti a pranzo dalle dodici:trenta alle quattordici:trenta e a cena dalle 19 alle 23 Posso aiutarla con qualcos'altro? - Cliente: No va bene così, volevo sapere solo questo.; 2.Va bene grazie e buona serata....
+
+**Log tool chiamati:Vapi-1.Resolve Relative Day; 2.Check Openings: {"restaurant_id":"roma","day":"2026-02-20","day_label":"venerdì 20 febbraio","closed":false,"lunch_range":["12:30","14:30"],"dinner_range":["19:00","23:00"],"requested_time":null,"time_human":null,"available":null,"reason":null,"nearest_slots":null,"nearest_slots_human":null,"max_people":8,"message":"Orari di apertura: pranzo dalle 12 e 30 alle 14 e 30 e cena dalle 19 alle 23."}; 3.Enda Call
+
+Render: {"ts":"2026-02-18T15:36:37.329Z","level":"info","event":"api_request","request_id":"50df6038","method":"POST","path":"/api/resolve_relative_day","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c7165-438d-733f-aece-570d1862f47e","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:36:37.361Z","level":"info","event":"resolve_relative_day_success","restaurant_id":"roma","source":"vapi","request_id":"50df6038","text":"venerdì","date":"2026-02-20","day_label":"venerdì 20 febbraio"}
+{"ts":"2026-02-18T15:36:39.344Z","level":"info","event":"api_request","request_id":"b079e309","method":"POST","path":"/api/check_openings","restaurant_id":"roma","backend_used":"sheets","prompt_version":"v1.0","call_id":"019c7165-438d-733f-aece-570d1862f47e","conversation_id":"672fd893-dc2f-4bb0-81bb-699f38256cd3"}
+{"ts":"2026-02-18T15:36:39.346Z","level":"info","event":"check_openings_success","restaurant_id":"roma","day":"2026-02-20","closed":false,"openings_count":14,"requested_time":null,"available":null,"reason":null,"source":"vapi","request_id":"b079e309"}
+
+---
+
+
+
+
 ## Riepilogo esiti Roma V2
 
 | Test | Descrizione | Esito V1 | Esito V2 |

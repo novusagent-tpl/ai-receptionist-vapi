@@ -583,6 +583,33 @@ Contiene:
 
 ---
 
+## Fase H — Miglioramenti backend pre-produzione
+
+### H1. Label fasce orarie personalizzabili nel KB
+**Obiettivo:** Rendere i label delle fasce orarie configurabili per ristorante (es. "colazione", "brunch", "apertura continua") invece di usare sempre "pranzo"/"cena" fissi.
+
+**Problema attuale:** Il backend genera `message` con label fissi "pranzo" e "cena". Se un ristorante fa colazione 8-12, il message dice "pranzo dalle 8 alle 12" — sbagliato. Se è aperto in continuo 11-22, dice "cena dalle 11 alle 22" — fuorviante.
+
+**Cosa serve:**
+- [ ] Aggiungere campo `label` opzionale nel KB per ogni fascia (default: "pranzo"/"cena" se non specificato)
+- [ ] Aggiornare `formatRangesText` e `findNextOpenDay` in `check_openings.js` per usare il label dal KB
+- [ ] Aggiornare `time-utils.js` se necessario
+- [ ] Nessuna modifica ai tool Vapi o al system prompt
+
+**Esempio KB:**
+```json
+"monday": {
+  "lunch": { "range": ["08:00", "12:00"], "label": "colazione" },
+  "dinner": { "range": ["17:00", "23:00"], "label": "cena" }
+}
+```
+
+**Priorità:** 🟠 MEDIA-ALTA (necessario per ristoranti reali con orari non standard)
+
+**Status:** [ ] Da fare (dopo chiusura test Roma)
+
+---
+
 ## COSA NON FARE ORA
 
 - ❌ Non toccare backend "per provare" senza motivo
@@ -623,6 +650,7 @@ Contiene:
 | F1 | Form web personale | 🟠 MEDIA-ALTA | - | [ ] |
 | F2 | Rischi Sheets/Calendar | 🟡 MEDIA | F1 | [ ] Documentato |
 | G1 | WhatsApp Business chatbot | 🟡 MEDIA | D2, lancio voce | [ ] |
+| H1 | Label fasce orarie personalizzabili | 🟠 MEDIA-ALTA | D2 | [ ] |
 
 **Legenda:** 🔴 Bloccante per test/lancio | 🟠 Importante pre-lancio | 🟡 Può aspettare
 
@@ -652,6 +680,7 @@ Contiene:
 - D2 - Eseguire test vocali (richiede STEP 1 completato)
 
 **STEP 4 — Prima di vendere (obbligatorio):**
+- H1 - Label fasce orarie personalizzabili (per ristoranti con colazione, brunch, apertura continua)
 - B4 - GDPR / Privacy
 - B5 - Security review finale
 - B6 - Rate limiting (prima di demo pubblica)
@@ -667,4 +696,4 @@ Contiene:
 
 ---
 
-*Ultimo aggiornamento: 2026-02-16*
+*Ultimo aggiornamento: 2026-02-18*

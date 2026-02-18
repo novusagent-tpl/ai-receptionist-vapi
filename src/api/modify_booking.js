@@ -18,6 +18,15 @@ function buildDayLabel(dateISO) {
   return `${dow} ${dt.day} ${ITALIAN_MONTHS[dt.month] || ''}`.trim();
 }
 
+function formatTimeHuman(hhmm) {
+  if (!hhmm) return hhmm;
+  const parts = String(hhmm).split(':');
+  const h = Number(parts[0]);
+  const m = Number(parts[1] || 0);
+  if (m === 0) return String(h);
+  return `${h} e ${String(m).padStart(2, '0')}`;
+}
+
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
  * Restituisce: { isVapi, toolCallId, args }
@@ -161,9 +170,17 @@ module.exports = async function modifyBooking(req, res) {
     });
 
 
-    // Arricchisci con day_label
-    if (result && result.ok && result.day) {
-      result.day_label = buildDayLabel(result.day) || result.day;
+    // Arricchisci con day_label e time_human
+    if (result && result.ok) {
+      if (result.day) {
+        result.day_label = buildDayLabel(result.day) || result.day;
+      }
+      if (result.time) {
+        result.time_human = formatTimeHuman(result.time);
+      }
+      const dl = result.day_label || result.day;
+      const th = result.time_human || result.time;
+      result.message = `Prenotazione modificata: ${dl} alle ${th}.`;
     }
 
     // Risposta per Vapi

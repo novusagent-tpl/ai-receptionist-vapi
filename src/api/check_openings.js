@@ -538,13 +538,10 @@ dayISO = dayStr;
         day: dayISO,
         day_label: dayLabel,
         closed: result.closed,
-        lunch_range: result.lunch_range || null,
-        dinner_range: result.dinner_range || null,
         requested_time: requestedTime || null,
         time_human: requestedTime ? formatTimeHuman(requestedTime) : null,
         available,
         reason,
-        nearest_slots: nearest,
         nearest_slots_human: Array.isArray(nearest) && nearest.length > 0
           ? nearest.map(s => formatTimeHuman(s))
           : null,

@@ -19,6 +19,15 @@ function buildDayLabel(dateISO) {
   return `${dow} ${dt.day} ${ITALIAN_MONTHS[dt.month] || ''}`.trim();
 }
 
+function formatTimeHuman(hhmm) {
+  if (!hhmm) return hhmm;
+  const parts = String(hhmm).split(':');
+  const h = Number(parts[0]);
+  const m = Number(parts[1] || 0);
+  if (m === 0) return String(h);
+  return `${h} e ${String(m).padStart(2, '0')}`;
+}
+
 /**
  * Estrae info da una chiamata Vapi (tool-calls) se presente.
  * Restituisce: { isVapi, toolCallId, args }
@@ -230,9 +239,19 @@ if (bookingDt < now.plus({ minutes: 10 })) {
       request_id: req.requestId || null,
     });
 
-    // Arricchisci con day_label
-    if (result && result.ok && result.day) {
-      result.day_label = buildDayLabel(result.day) || result.day;
+    // Arricchisci con day_label e time_human
+    if (result && result.ok) {
+      if (result.day) {
+        result.day_label = buildDayLabel(result.day) || result.day;
+      }
+      if (result.time) {
+        result.time_human = formatTimeHuman(result.time);
+      }
+      const dl = result.day_label || result.day;
+      const th = result.time_human || result.time;
+      const p = result.people;
+      const n = result.name;
+      result.message = `Prenotazione confermata per ${dl} alle ${th}, ${p} ${p === 1 ? 'persona' : 'persone'} a nome ${n}.`;
     }
 
     // Se chiamato da Vapi → formato tools
