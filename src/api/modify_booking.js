@@ -161,17 +161,14 @@ module.exports = async function modifyBooking(req, res) {
       updates
     );
 
-    // Log successo sintetico
-    logger.info('modify_booking_success', {
-      restaurant_id,
-      booking_id,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
-
-
     // Arricchisci con day_label e time_human
     if (result && result.ok) {
+      logger.info('modify_booking_success', {
+        restaurant_id,
+        booking_id,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
       if (result.day) {
         result.day_label = buildDayLabel(result.day) || result.day;
       }
@@ -181,6 +178,15 @@ module.exports = async function modifyBooking(req, res) {
       const dl = result.day_label || result.day;
       const th = result.time_human || result.time;
       result.message = `Prenotazione modificata: ${dl} alle ${th}.`;
+    } else if (result && !result.ok) {
+      logger.warn('modify_booking_rejected', {
+        restaurant_id,
+        booking_id,
+        error_code: result.error_code || 'UNKNOWN',
+        error_message: result.error_message || null,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
     }
 
     // Risposta per Vapi

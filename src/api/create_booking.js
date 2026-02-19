@@ -227,20 +227,18 @@ if (bookingDt < now.plus({ minutes: 10 })) {
       notes
     });
 
-    // Log successo sintetico
-    logger.info('create_booking_success', {
-      restaurant_id,
-      day,
-      time,
-      people: peopleNum,
-      phone,
-      booking_id: result && result.booking_id,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
-
     // Arricchisci con day_label e time_human
     if (result && result.ok) {
+      logger.info('create_booking_success', {
+        restaurant_id,
+        day,
+        time,
+        people: peopleNum,
+        phone,
+        booking_id: result.booking_id,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
       if (result.day) {
         result.day_label = buildDayLabel(result.day) || result.day;
       }
@@ -252,6 +250,18 @@ if (bookingDt < now.plus({ minutes: 10 })) {
       const p = result.people;
       const n = result.name;
       result.message = `Prenotazione confermata per ${dl} alle ${th}, ${p} ${p === 1 ? 'persona' : 'persone'} a nome ${n}.`;
+    } else if (result && !result.ok) {
+      logger.warn('create_booking_rejected', {
+        restaurant_id,
+        day,
+        time,
+        people: peopleNum,
+        phone,
+        error_code: result.error_code || 'UNKNOWN',
+        error_message: result.error_message || null,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
     }
 
     // Se errore con nearest_slots (SLOT_FULL/OUTSIDE_HOURS), aggiungi versione human

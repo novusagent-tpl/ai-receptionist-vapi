@@ -78,13 +78,23 @@ module.exports = async function cancelBooking(req, res) {
       booking_id
     );
 
-    // Log successo sintetico
-    logger.info('cancel_booking_success', {
-      restaurant_id,
-      booking_id: result && result.booking_id,
-      source: isVapi ? 'vapi' : 'http',
-      request_id: req.requestId || null,
-    });
+    if (result && result.ok) {
+      logger.info('cancel_booking_success', {
+        restaurant_id,
+        booking_id,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
+    } else if (result && !result.ok) {
+      logger.warn('cancel_booking_rejected', {
+        restaurant_id,
+        booking_id,
+        error_code: result.error_code || 'UNKNOWN',
+        error_message: result.error_message || null,
+        source: isVapi ? 'vapi' : 'http',
+        request_id: req.requestId || null,
+      });
+    }
 
     // Risposta per Vapi
     if (isVapi && toolCallId) {

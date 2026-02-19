@@ -13,6 +13,16 @@ const ITALIAN_MONTHS = {
   9: 'settembre', 10: 'ottobre', 11: 'novembre', 12: 'dicembre'
 };
 
+function formatTimeHuman(hhmm) {
+  if (!hhmm) return hhmm;
+  const parts = String(hhmm).split(':');
+  if (parts.length < 2) return hhmm;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (m === 0) return `${h}`;
+  return `${h} e ${m === 30 ? '30' : String(m).padStart(2, '0')}`;
+}
+
 /**
  * Da una data ISO (es. "2026-02-19") genera "giovedì 19 febbraio 2026".
  * Se la data non è valida, ritorna null.
@@ -106,10 +116,12 @@ module.exports = async function listBookings(req, res) {
 
 const resultList = Array.isArray(result && result.results) ? result.results : [];
 
-    // Arricchisci ogni prenotazione con day_label (calcolato dal backend, universale)
     for (const booking of resultList) {
       if (booking.day) {
         booking.day_label = buildDayLabel(booking.day) || booking.day;
+      }
+      if (booking.time) {
+        booking.time_human = formatTimeHuman(booking.time);
       }
     }
 
@@ -122,18 +134,17 @@ const resultList = Array.isArray(result && result.results) ? result.results : []
       request_id: req.requestId || null,
     });
 
-    // Genera message riepilogativo per Vapi
     let message = null;
     if (resultList.length === 0) {
       message = 'Nessuna prenotazione trovata per questo numero di telefono.';
     } else if (resultList.length === 1) {
       const b = resultList[0];
-      const timeStr = (b.time || '').slice(0, 5);
-      message = `Trovata 1 prenotazione: ${b.day_label} alle ${timeStr} per ${b.people} ${b.people === 1 ? 'persona' : 'persone'} a nome ${b.name || 'N/D'}.`;
+      const timeH = b.time_human || formatTimeHuman(b.time) || b.time;
+      message = `Trovata 1 prenotazione: ${b.day_label} alle ${timeH} per ${b.people} ${b.people === 1 ? 'persona' : 'persone'} a nome ${b.name || 'N/D'}.`;
     } else {
       const lines = resultList.map(b => {
-        const timeStr = (b.time || '').slice(0, 5);
-        return `${b.day_label} alle ${timeStr} per ${b.people} ${b.people === 1 ? 'persona' : 'persone'} a nome ${b.name || 'N/D'}`;
+        const timeH = b.time_human || formatTimeHuman(b.time) || b.time;
+        return `${b.day_label} alle ${timeH} per ${b.people} ${b.people === 1 ? 'persona' : 'persone'} a nome ${b.name || 'N/D'}`;
       });
       message = `Trovate ${resultList.length} prenotazioni: ${lines.join('; ')}.`;
     }
