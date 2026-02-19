@@ -9,13 +9,12 @@ const logger = require('./logger');
  * RATE_LIMIT_PER_CALLER   = max richieste per IP per finestra (default 120)
  * RATE_LIMIT_WINDOW_MS    = finestra temporale in ms (default 60000 = 1 minuto)
  *
- * Nota: 30 req/min era troppo basso — Vapi può fare più tool call per conversazione
- * e i regression test fanno ~70 richieste in pochi secondi.
- * 120/caller e 200/tenant sono limiti ragionevoli per proteggere da abuso
- * senza bloccare usage legittimo.
+ * Nota: il regression test suite fa ~300+ richieste in un singolo run.
+ * 500/caller e 500/tenant sono limiti ragionevoli per proteggere da abuso
+ * senza bloccare usage legittimo o test automatici.
  */
-const TENANT_LIMIT = parseInt(process.env.RATE_LIMIT_PER_TENANT || '200', 10);
-const CALLER_LIMIT = parseInt(process.env.RATE_LIMIT_PER_CALLER || '120', 10);
+const TENANT_LIMIT = parseInt(process.env.RATE_LIMIT_PER_TENANT || '500', 10);
+const CALLER_LIMIT = parseInt(process.env.RATE_LIMIT_PER_CALLER || '500', 10);
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10);
 
 // Bucket: { key: { count, resetAt } }

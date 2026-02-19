@@ -325,7 +325,7 @@ dayISO = dayStr;
     // availability (solo se requestedTime presente)
     let available = null;
     let nearest = null;
-    let reason = null; // 'closed' | 'cutoff' | 'not_in_openings' | 'full' | null
+    let reason = result.closed ? 'closed' : null; // 'closed' | 'cutoff' | 'not_in_openings' | 'full' | null
 
     if (requestedTime && result.closed) {
       // Giorno chiuso: short-circuit, niente capacity check
@@ -573,9 +573,13 @@ dayISO = dayStr;
       lunch_range: result.lunch_range || null,
       dinner_range: result.dinner_range || null,
       requested_time: requestedTime || null,
+      time_human: requestedTime ? formatTimeHuman(requestedTime) : null,
       available,
       reason,
       nearest_slots: nearest,
+      nearest_slots_human: Array.isArray(nearest) && nearest.length > 0
+        ? nearest.map(s => formatTimeHuman(s))
+        : null,
       max_people: maxPeople,
       message
     };
