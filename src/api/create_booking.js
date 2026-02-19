@@ -254,6 +254,11 @@ if (bookingDt < now.plus({ minutes: 10 })) {
       result.message = `Prenotazione confermata per ${dl} alle ${th}, ${p} ${p === 1 ? 'persona' : 'persone'} a nome ${n}.`;
     }
 
+    // Se errore con nearest_slots (SLOT_FULL/OUTSIDE_HOURS), aggiungi versione human
+    if (result && !result.ok && Array.isArray(result.nearest_slots) && result.nearest_slots.length > 0) {
+      result.nearest_slots_human = result.nearest_slots.map(s => formatTimeHuman(s));
+    }
+
     // Se chiamato da Vapi → formato tools
     if (isVapi && toolCallId) {
       return res.status(200).json({

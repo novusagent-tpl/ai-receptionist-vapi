@@ -1,156 +1,263 @@
 # AI-Receptionist-VAPI — CONTEXT (Single Source of Truth)
+# Ultimo aggiornamento: 18 febbraio 2026
 
-## Stato attuale
-- Project: AI-Receptionist-VAPI (Italia, multi-ristorante)
-- Ambiente: Europe/Rome
-- Vincoli: **STRICT MODE**, backend = fonte di verità, prompt NON può contraddire backend
-- **Stato corrente: G22 — Voice Stress Test & Hardening (Fase 1 in corso)**
+## Cos'è il progetto
+AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risponde un'assistente AI che gestisce prenotazioni, orari, modifiche, cancellazioni, FAQ e handover verso il personale. Il sistema è multi-ristorante e multi-gestionale.
 
----
-
-## Tools API disponibili (stabili)
-- /api/check_openings
-- /api/create_booking
-- /api/list_bookings
-- /api/modify_booking
-- /api/cancel_booking
-- /api/faq
-- /api/send_sms
-- Tool di supporto già integrati:
-  - resolve_relative_day
-  - resolve_relative_time
-  - is_open_now
+## Stack tecnico
+- **Backend**: Node.js (Express) su Render
+- **Piattaforma vocale**: Vapi (LLM + TTS + Transcriber + tool calling)
+- **Gestionali supportati**: Google Sheets/Calendar, resOS, OctoTable
+- **Timezone**: Europe/Rome (gestito con Luxon)
+- **Principio**: backend = fonte di verità. L'AI non decide, il backend decide.
 
 ---
 
-## Decisioni chiave (immutabili)
+## Ristoranti configurati
 
-### Apertura vs Prenotabilità
-- `slots` = **orari di apertura** (NON influenzati da capacità o cutoff)
-- `available` + `nearest_slots` = **prenotabilità reale**
-- `unavailability_reason` guida il linguaggio:
-  - `not_in_openings` → non siamo aperti a quell’ora
-  - `cutoff` → aperti ma non prenotiamo a ridosso chiusura
-  - `full` → capacità esaurita
+| ID | Nome | Gestionale | Stato |
+|----|------|-----------|-------|
+| roma | Ristorante Roma (test) | Google Sheets/Calendar | Test in corso |
+| modena01 | Da Michele | resOS | Testato parzialmente |
+| octodemo | OctoDemo (sandbox) | OctoTable | Testato parzialmente |
+
+---
+
+## Tools API (11 attivi su Vapi)
+
+| Tool | Endpoint | Descrizione |
+|------|----------|-------------|
+| check_openings | /api/check_openings | Verifica apertura e disponibilità. Restituisce `message`, `day_label`, `time_human`, `nearest_slots_human`, `available`, `closed`, `reason`, `max_people`. Supporta `expected_weekday` per mismatch detection. |
+| create_booking | /api/create_booking | Crea prenotazione. Verifica capacità server-side per Sheets. Restituisce `message`, `day_label`, `time_human`. |
+| modify_booking | /api/modify_booking | Modifica prenotazione. Restituisce `message`, `day_label`, `time_human`. |
+| cancel_booking | /api/cancel_booking | Cancella prenotazione. |
+| list_bookings | /api/list_bookings | Lista prenotazioni future per telefono. Include `day_label` e `message`. Filtra canceled/deleted per resOS. |
+| resolve_relative_day | /api/resolve_relative_day | Converte "domani", "sabato", ecc. in data ISO + `day_label`. |
+| resolve_relative_time | /api/resolve_relative_time | Converte "tra 2 ore", "mezz'ora" in HH:MM. Accetta anche orari assoluti come fallback. Supporta "X e mezza", "X e un quarto". |
+| is_open_now | /api/is_open_now | Verifica se il ristorante è aperto ora (per handover). |
+| send_sms | /api/send_sms | Invio SMS di conferma. |
+| end_call | — | Tool Vapi nativo per chiudere la chiamata. |
+| transfer_call_tool_<id> | — | Tool Vapi nativo per trasferire al ristorante. Uno per ristorante. |
+
+---
+
+## Architettura backend — Decisioni chiave
+
+### Backend rigido (message-first)
+- Ogni tool restituisce un campo `message` con una frase italiana pronta per il cliente.
+- L'AI usa `message` come base per la risposta. Non lo contraddice mai.
+- Il payload Vapi contiene SOLO campi che l'AI deve leggere (message, day_label, time_human, nearest_slots_human, available, closed, reason, max_people). I campi raw (slots, lunch_range, dinner_range) sono solo nella risposta HTTP/Postman per debug.
+
+### day_label (universale)
+- Tutti i tool restituiscono `day_label` (es. "giovedì 19 febbraio").
+- L'AI usa SEMPRE day_label per comunicare date. Mai calcolo autonomo da ISO.
+
+### time_human / nearest_slots_human
+- Orari in formato italiano parlato (es. "20 e 30" invece di "20:30").
+- Evita problemi TTS (colon letto male, numeri in inglese).
+
+### expected_weekday (WEEKDAY_MISMATCH)
+- Se il cliente dice un weekday, l'AI passa `expected_weekday` a check_openings.
+- Il backend verifica che la data corrisponda al weekday.
+- Se mismatch: restituisce `corrected_day` e `corrected_day_label` con il prossimo giorno corretto.
+- L'AI richiama check_openings silenziosamente con la data corretta.
+
+### Capacity engine (Sheets/Calendar)
+- `max_concurrent_bookings` e `avg_stay_minutes` nel KB.
+- check_openings: conta prenotazioni attive con overlap bidirezionale.
+- create_booking per Sheets: verifica capacità server-side prima di scrivere (blocco anti-overbooking).
+- Per resOS/OctoTable: l'API esterna gestisce la capacità.
 
 ### Cutoff prenotazioni
-- Config per ristorante: `booking_cutoff_minutes`
-- Applicato **solo** alla prenotabilità (available/nearest)
-- NON altera gli slot informativi
+- `booking_cutoff_minutes` nel KB.
+- Applicato solo alla prenotabilità (nearest_slots filtrati).
+- NON altera gli orari informativi di apertura.
 
-### Capacity engine
-- Config: `max_concurrent_bookings`, `avg_stay_minutes`
-- `check_openings` calcola disponibilità su prenotazioni reali
+### Durata evento Calendar
+- Usa `avg_stay_minutes` dal KB (non più hardcoded 2 ore).
 
-### Fasce pranzo / cena
-- Backend espone: `lunch_range`, `dinner_range`
-- Usate:
-  - per informazione orari
-  - per disambiguazione orari ambigui
-- NON per inventare slot
+### Filtro prenotazioni cancellate (resOS)
+- list_bookings filtra status "canceled" e "deleted" da resOS.
+- Solo prenotazioni "approved" vengono mostrate.
 
----
-
-## G21 — Stato finale
-- Fase 1 ✅ Data Integrity Sheets
-- Fase 2 ✅ Cutoff pre-chiusura
-- Fase 3 ✅ Error handling umano (PAST_TIME / PAST_DATE)
-- Fase 4 ✅ Aperto ≠ prenotabile
-- Fase 5 ✅ Orari ambigui (10/22, no assunzioni)
-- Fase 6 ✅ Micro-UX & tono  
-➡️ **G21 CHIUSA**
+### Next open day
+- Quando un giorno è chiuso, il backend cerca il prossimo giorno aperto (max 7 giorni) e lo include nel `message`.
 
 ---
 
-## Data Integrity (Sheets) — decisioni implementate
-- Tab Google Sheets: `Bookings`
-- Create:
-  - scrittura deterministica `values.update` su `Bookings!A{row}:I{row}`
-  - STOP `append`
-- Delete:
-  - cancellazione riga con `deleteDimension`
-  - NO `values.clear`
-- Logger import fix in `reservations.js`
+## System Prompt — Versione attuale: v2.0
+
+### File prompt
+- `prompts/System-Prompt-ReceptionistV2.md` — Roma (Alice)
+- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (Giulia)
+- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (Sofia)
+- `prompts/SYSTEM-PROMPT-base-18_02.md` — Backup v1.4 pre-pulizia
+
+### Struttura prompt (4 sezioni)
+1. **CORE RULES** — Regole logiche infrangibili, divieti assoluti
+2. **STATE MACHINE** — Flussi operativi (prenotazione, modifica, cancellazione, orari, FAQ, handover)
+3. **TOOL CONTRACTS** — Quando e come usare ogni tool, prerequisiti, output
+4. **VOICE & UX** — Tono, errori, fallback, esempi
+
+### Differenze tra prompt
+Solo 4 campi cambiano per ristorante:
+- `restaurant_id` (roma / modena01 / octodemo)
+- Nome receptionist (Alice / Giulia / Sofia)
+- `transfer_call_tool_<id>`
+- `is_open_now(restaurant_id="<id>")`
 
 ---
 
-## File principali (touch list)
-- src/server-vapi.js
-- src/api/check_openings.js
-- src/reservations.js
-- src/calendar.js
-- src/time-utils.js
-- src/kb.js
-- kb/roma.json
-- src/logger.js
-- docs/*
+## Cosa è stato fatto (cronologia)
+
+### Fase G21 — Backend Sheets robusto ✅
+- Data integrity Sheets (scrittura deterministica, cancellazione riga)
+- Cutoff pre-chiusura
+- Error handling umano (PAST_TIME, PAST_DATE)
+- Distinzione aperto vs prenotabile
+- Orari ambigui (1-11 → chiedere mattina/sera)
+
+### Fase G22 — Voice Stress Test ✅
+- Hard stop check_openings/resolve_relative_time nel prompt
+- Normalizzazione vocale orari
+- Normalizzazione telefono E.164
+
+### Integrazione resOS ✅
+- CRUD prenotazioni via API resOS
+- Filtro status canceled/deleted in list_bookings
+
+### Integrazione OctoTable ✅
+- CRUD prenotazioni via API OctoTable (sandbox)
+- Error mapping OctoTable → codici errore standard
+
+### Backend rigido — Refactor principale ✅
+- Campo `message` in check_openings (frase pronta per ogni stato)
+- `day_label` universale in tutti i tool
+- `time_human` e `nearest_slots_human` per TTS corretto
+- `expected_weekday` + WEEKDAY_MISMATCH in check_openings
+- `next_open_day` quando chiuso
+- reason="closed" fix (prima era "not_in_openings" anche quando chiuso)
+- resolve_relative_time accetta orari assoluti come fallback
+- Rimossi slots/lunch_range/dinner_range dal payload Vapi
+
+### Sheets/Calendar come gestionale rigido ✅
+- Capacity check server-side in create_booking per Sheets
+- Durata evento Calendar dinamica (avg_stay_minutes)
+- Modulo condiviso capacity-utils.js
+- Validazione orario apertura in create_booking
+
+### Pulizia prompt v2.0 ✅
+- Da 237 righe a 211 righe (~11% meno)
+- Unificate 3 regole weekday/day_label/mismatch in 1
+- Rimossi riferimenti a lunch_range/dinner_range (non più nel payload Vapi)
+- Eliminata sezione "Frasi per risposta check_openings" (ora usa message)
+- Fix bug modena01: transfer_call_tool_roma → transfer_call_tool_modena01
+
+### create_booking / modify_booking — Campi human ✅
+- `time_human` e `message` di conferma in create_booking e modify_booking
+- `day_label` in entrambi
 
 ---
 
-## Prompt assistant — regole operative
+## Test — Stato attuale
 
-### Intent ORARI (informazione)
-- Se l’utente chiede orari/apertura:
-  - Rispondere **solo** su apertura (slots / lunch_range / dinner_range)
-  - ❌ NON parlare di prenotazioni
-  - ❌ IGNORARE cutoff, capacity, nearest_slots
+### Regression tests backend (scripts/regression-tests.js) ✅
+- Tutti passati (locale + Render) per roma, modena01, octodemo
 
-### Intent PRENOTAZIONE
-- Usare `available`, `unavailability_reason`, `nearest_slots`
-- Proporre **max 2 alternative**
-- Una domanda per turno
+### Test Vapi Roma (Sheets/Calendar)
+- File: `docs/Test_Attivazione/test_vapi_roma_sheets_v2.md`
+- **Parte 1 (R1–R9)**: completata, problemi risolti con refactor backend
+- **Parte 2 (RC1–RE2)**: completata, fix day_label per list_bookings
+- **Parte 3 (RF1–RJ2)**: testata con prompt v1.4, da ri-testare con v2.0
+- Ri-test RG2, RH2, RG3 dopo fix TTS: tutti PASS
 
-### Orari ambigui (10 / 22)
-- Usare lunch_range / dinner_range
-- Chiedere conferma **solo se ambiguo**
-- NON chiamare tool prima della disambiguazione
+### Test Vapi Modena01 (resOS)
+- Test parziali fino a H3 completati
+- Da fare: test rapidi post-refactor (5-6 test chiave)
 
-### Error handling umano
-- Mai messaggi tecnici
-- Spiegare il problema + recovery
-- Handover solo se necessario
+### Test Vapi OctoDemo (OctoTable)
+- Da fare: test rapidi (5-6 test chiave)
 
 ---
 
-## G22 — Voice Stress Test & Hardening
+## Configurazione KB (Knowledge Base)
 
-### Obiettivo
-- Scoprire problemi reali in chiamata vocale
-- Eliminare chiamate tool inutili
-- Rafforzare prompt senza toccare backend
-
-### Stato
-- Fase 1: Test reali
-  - S1–S4 completati
-  - S5–S12 da fare
-- Fase 2: Classificazione problemi (PROMPT-first)
-- Fase 3: Patch mirate (micro-patch prompt)
+Ogni ristorante ha un file JSON in `kb/` con:
+- Orari di apertura per giorno (lunch/dinner ranges)
+- `max_concurrent_bookings` — max prenotazioni contemporanee
+- `avg_stay_minutes` — durata media prenotazione
+- `booking_cutoff_minutes` — minuti prima della chiusura per non accettare prenotazioni
+- `slot_step_minutes` — intervallo tra slot (default 30)
+- `max_nearest_slots` — max alternative proposte (default 3)
+- `max_people` — max persone per prenotazione online
+- FAQ, indirizzo, contatti, policy
 
 ---
 
-## G22 — Problemi emersi dai test (S1–S4)
+## Tool su Vapi — Configurazione
 
-1) `check_openings` chiamato una volta senza `restaurant_id` / `day`
-   - Causa: gating prompt non abbastanza forte
-   - Fix previsto: **HARD STOP** nel prompt
+Per ogni assistente Vapi servono 11 tool:
+- 10 tool condivisi (stessi per tutti gli assistenti)
+- 1 tool `transfer_call_tool_<id>` specifico per ristorante
 
-2) `resolve_relative_time` chiamato con orari assoluti (“21”, “22:30”)
-   - Causa: mancanza whitelist positiva
-   - Fix previsto: **HARD STOP** nel prompt
+Il tool `faq` esiste nel backend ma non è usato su Vapi — le FAQ sono nella Knowledge Base di Vapi.
 
-3) UX vocale: lettura orari tipo “2130”
-   - Fix previsto: normalizzazione vocale orari nel prompt
-
-4) Telefono salvato senza prefisso +39
-   - Fix previsto: normalizzazione telefono E.164 nel prompt
+### Description tool su Vapi (importanti)
+- **check_openings**: "Verifica disponibilità per un giorno e orario. Restituisce: message (frase pronta da usare), available, nearest_slots_human, max_people. Usare SEMPRE il campo message come base per la risposta."
+- **end_call**: "Termina la chiamata immediatamente. Chiamare nella STESSA risposta in cui dai il saluto finale al cliente. Non aspettare che il cliente parli di nuovo. Usare solo quando la conversazione è conclusa."
 
 ---
 
-## Obiettivo immediato (G22 — Fase 1)
-- Applicare micro-patch PROMPT-ONLY:
-  - Hard stop check_openings
-  - Hard stop resolve_relative_time
-  - Normalizzazione vocale orari
-  - Normalizzazione telefono
-- Rifare test S1–S3
-- Verificare log puliti e UX vocale corretta
+## Prossimi passi
+
+1. **Ri-test RF1–RJ2** con prompt v2.0
+2. **Test rapidi Modena01** (5-6 test chiave)
+3. **Test rapidi OctoDemo** (5-6 test chiave)
+4. **H1 — Label fasce orarie personalizzabili** (per ristoranti con colazione/apertura continua)
+5. **Onboarding primo ristorante reale**
+6. (Futuro) WhatsApp Business integration
+7. (Futuro) Dashboard monitoraggio automatico
+
+---
+
+## File principali del progetto
+
+### Backend
+- `src/server-vapi.js` — Server Express, routing
+- `src/api/check_openings.js` — Verifica apertura e disponibilità
+- `src/api/create_booking.js` — Crea prenotazione
+- `src/api/modify_booking.js` — Modifica prenotazione
+- `src/api/cancel_booking.js` — Cancella prenotazione
+- `src/api/list_bookings.js` — Lista prenotazioni
+- `src/api/resolve_relative_day.js` — Risolve giorni relativi
+- `src/api/resolve_relative_time.js` — Risolve orari relativi
+- `src/api/is_open_now.js` — Verifica apertura attuale
+- `src/api/faq.js` — FAQ (non usato su Vapi)
+- `src/api/send_sms.js` — Invio SMS
+- `src/capacity-utils.js` — Funzioni condivise per capacità
+- `src/reservations.js` — Router gestionali
+- `src/reservations-sheets.js` — Integrazione Google Sheets/Calendar
+- `src/reservations-resos.js` — Integrazione resOS
+- `src/reservations-octotable.js` — Integrazione OctoTable
+- `src/calendar.js` — Google Calendar
+- `src/time-utils.js` — Utility orari/date
+- `src/kb.js` — Lettura Knowledge Base
+- `src/logger.js` — Logging strutturato
+- `src/config/ristoranti.json` — Configurazione ristoranti
+
+### KB
+- `kb/roma.json` — KB Roma
+- `kb/modena01.json` — KB Modena01
+
+### Prompt
+- `prompts/System-Prompt-ReceptionistV2.md` — Roma (v2.0)
+- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (v2.0)
+- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (v2.0)
+
+### Test
+- `scripts/regression-tests.js` — Test backend automatizzati
+- `docs/Test_Attivazione/test_vapi_roma_sheets_v2.md` — Test Vapi Roma
+
+### Docs
+- `docs/ROADMAP-SAAS.md` — Roadmap completa del progetto
+- `docs/CONTEXT.txt` — Questo file

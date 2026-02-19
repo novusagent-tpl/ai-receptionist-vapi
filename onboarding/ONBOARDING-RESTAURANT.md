@@ -45,6 +45,9 @@ Prima di tutto, chiedi al ristorante:
 | Capacità contemporanea (max prenotazioni attive nello stesso slot) | 3 | Si |
 | Durata media permanenza | 60 min | Si |
 | Cutoff prenotazione (minuti prima della chiusura) | 30 | Si |
+| Intervallo slot (slot_step_minutes) | 30 (o 15) | Si |
+| Max alternative proposte (max_nearest_slots) | 3 | No (default 3) |
+| Nome receptionist AI | "Alice", "Giulia" | Si |
 | FAQ: parcheggio, allergeni, animali, tavoli all'aperto, menu, eventi | Testo libero | Si |
 | Backend scelto | resOS / OctoTable / Google Sheets | Si |
 | Credenziali API (se resOS/OctoTable) | API key / restaurant ID | Se gestionale |
@@ -76,6 +79,8 @@ Compila:
 - `max_concurrent_bookings` → capacità contemporanea
 - `avg_stay_minutes` → durata media permanenza
 - `booking_cutoff_minutes` → cutoff prenotazione
+- `slot_step_minutes` → intervallo tra slot (default 30, usa 15 per slot più fitti)
+- `max_nearest_slots` → max alternative proposte (default 3)
 - `openings` → orari per ogni giorno (formato `"HH:MM"`)
 - `openings.overrides` → chiusure straordinarie
 - `faq` → array di domande/risposte
@@ -114,13 +119,13 @@ In `.env` aggiungi la chiave reale con il nome scelto (es. `RESOS_API_KEY_MODENA
 
 ### 5.4 Creare il System Prompt
 
-Copia un prompt esistente da `prompts/` e adatta:
-- `restaurant_id` → il nuovo ID
-- Nome ristorante
-- `is_open_now(restaurant_id="<nuovo_id>")`
-- `transfer_call_tool_<restaurant_id>` (se serve handover)
-- Versione `(v1.0)` nel titolo
-- Riga nel changelog
+Copia un prompt esistente da `prompts/` (es. `System-Prompt-ReceptionistV2.md`) e adatta questi 4 campi:
+- `restaurant_id` → il nuovo ID (es. "milano01")
+- Nome receptionist (es. "Giulia", "Alice") — nella riga "Ruolo: sei **Nome**, la receptionist..."
+- `is_open_now(restaurant_id="<nuovo_id>")` — in Flow HANDOVER e in TOOL CONTRACTS
+- `transfer_call_tool_<restaurant_id>` — in Flow HANDOVER
+
+Tutto il resto (regole, flow, tool contracts) resta identico. NON duplicare regole, NON aggiungere dati specifici del ristorante (orari, max persone) nel prompt — quelli vengono dal KB e dal backend.
 
 Salva come `prompts/System-Prompt-Receptionist_<restaurant_id>.md`
 
@@ -183,26 +188,49 @@ git push
 - Carica il file `kb/<restaurant_id>-faq-vapi.md` nella sezione Files di Vapi
 - Assegna il file all'assistente nella sezione Knowledge Base
 
-### 7.4 Tools HTTP
-Configura TUTTI i tool puntando al backend Render:
-- `https://<render-app>.onrender.com/api/check_openings`
-- `https://<render-app>.onrender.com/api/create_booking`
-- `https://<render-app>.onrender.com/api/list_bookings`
-- `https://<render-app>.onrender.com/api/modify_booking`
-- `https://<render-app>.onrender.com/api/cancel_booking`
-- `https://<render-app>.onrender.com/api/resolve_relative_day`
-- `https://<render-app>.onrender.com/api/resolve_relative_time`
-- `https://<render-app>.onrender.com/api/is_open_now`
-- `https://<render-app>.onrender.com/api/send_sms`
+### 7.4 Tools (11 totali per assistente)
 
-NON configurare il tool `faq` — le FAQ passano dalla Knowledge Base di Vapi.
+**9 Tool HTTP** — puntano al backend Render:
+- `check_openings` → `https://<render-app>.onrender.com/api/check_openings`
+- `create_booking` → `https://<render-app>.onrender.com/api/create_booking`
+- `list_bookings` → `https://<render-app>.onrender.com/api/list_bookings`
+- `modify_booking` → `https://<render-app>.onrender.com/api/modify_booking`
+- `cancel_booking` → `https://<render-app>.onrender.com/api/cancel_booking`
+- `resolve_relative_day` → `https://<render-app>.onrender.com/api/resolve_relative_day`
+- `resolve_relative_time` → `https://<render-app>.onrender.com/api/resolve_relative_time`
+- `is_open_now` → `https://<render-app>.onrender.com/api/is_open_now`
+- `send_sms` → `https://<render-app>.onrender.com/api/send_sms`
 
-### 7.5 Test in chat Vapi
-- Prenotazione
-- Modifica
-- Cancellazione
-- Orari
-- FAQ
+**2 Tool nativi Vapi:**
+- `end_call` — Tipo: End Call. Description: "Termina la chiamata immediatamente. Chiamare nella STESSA risposta in cui dai il saluto finale al cliente. Non aspettare che il cliente parli di nuovo. Usare solo quando la conversazione è conclusa."
+- `transfer_call_tool_<restaurant_id>` — Tipo: Transfer Call. Numero di destinazione: il numero reale del ristorante.
+
+NON configurare il tool `faq` su Vapi — le FAQ passano dalla Knowledge Base di Vapi.
+
+### 7.5 Tool Descriptions importanti
+
+Per `check_openings` aggiungere questa description:
+> Verifica disponibilità per un giorno e orario. Restituisce: message (frase pronta da usare), available, nearest_slots_human, max_people. Usare SEMPRE il campo message come base per la risposta.
+
+Per `check_openings` aggiungere `expected_weekday` nei Parameters:
+```json
+"expected_weekday": {
+  "description": "Giorno della settimana indicato dal cliente (es. giovedì, sabato). Passare SOLO se il cliente ha detto un weekday. Il backend verifica che la data corrisponda.",
+  "type": "string"
+}
+```
+
+### 7.6 Transcriber e Voice
+- **Transcriber**: lingua italiana. "Use Numerals" attivato.
+- **Voice**: scegliere una voce italiana (11labs o altra). Preferire voci solo italiano per evitare pronuncia inglese.
+
+### 7.7 Test in chat Vapi
+- Prenotazione completa
+- Modifica prenotazione
+- Cancellazione prenotazione
+- Orari ("siete aperti domani?")
+- FAQ (dalla Knowledge Base)
+- Handover ("vorrei parlare con qualcuno")
 
 ---
 
@@ -215,18 +243,32 @@ NON configurare il tool `faq` — le FAQ passano dalla Knowledge Base di Vapi.
 
 ---
 
-## 9. Test finale end-to-end
+## 9. Validation Suite (OBBLIGATORIA prima di attivare)
 
-Simula una chiamata vocale e verifica:
+### 9.1 Regression test backend
+```
+node scripts/regression-tests.js https://<render-app>.onrender.com
+```
+Tutti i test devono passare per il nuovo restaurant_id.
 
-1. Prenotazione → compare nel gestionale/Sheet
-2. Modifica → aggiornata nel gestionale/Sheet
-3. Cancellazione → rimossa nel gestionale/Sheet
-4. FAQ → risponde correttamente
-5. Orari → risponde correttamente
-6. Handover → trasferisce se aperto, avvisa se chiuso
+### 9.2 Test chiamata vocale (minimo 6 test)
 
-Controlla `/metrics` per confermare che non ci sono errori.
+| # | Test | Cosa verificare |
+|---|------|----------------|
+| 1 | Prenotazione completa | Prenotazione compare nel gestionale/Sheet |
+| 2 | Modifica prenotazione | Aggiornata nel gestionale/Sheet |
+| 3 | Cancellazione | Rimossa nel gestionale/Sheet |
+| 4 | Orari ("siete aperti domani?") | Risponde con orari corretti |
+| 5 | Giorno chiuso | Dice che è chiuso + propone prossimo giorno aperto |
+| 6 | Handover ("passo parlare con qualcuno") | Trasferisce se aperto, avvisa se chiuso |
+
+### 9.3 Verifica metriche
+Controlla `/metrics` e filtra per il nuovo restaurant_id:
+- `error_rate_percent` deve essere 0% (o solo errori attesi dai test negativi)
+- `provider_failures` deve essere 0
+
+### 9.4 Controllo log Render
+Cerca log con `restaurant_id=<nuovo_id>`. Verifica che non ci siano errori inattesi.
 
 Se tutto OK → ristorante operativo.
 
@@ -249,6 +291,33 @@ Se tutto OK → ristorante operativo.
 |------|-------|
 | Raccolta dati dal ristorante | 15-30 min |
 | Setup tecnico (KB, config, prompt) | 20-30 min |
-| Setup Vapi (assistant, KB, tools) | 15-20 min |
-| Test e deploy | 10-15 min |
-| **Totale** | **60-90 min** |
+| Setup Vapi (assistant, KB, tools, voice) | 20-30 min |
+| Deploy + regression test | 10-15 min |
+| Validation suite (6 test chiamata) | 15-20 min |
+| **Totale** | **80-120 min** |
+
+---
+
+## Checklist rapida
+
+- [ ] restaurant_id scelto
+- [ ] Dati raccolti dal ristorante
+- [ ] `kb/<id>.json` creato e compilato
+- [ ] `kb/<id>-faq-vapi.md` creato
+- [ ] `src/config/ristoranti.json` aggiornato
+- [ ] `.env` aggiornato (se resOS/OctoTable)
+- [ ] Render Environment Variables aggiornate
+- [ ] `prompts/System-Prompt-Receptionist_<id>.md` creato
+- [ ] Deploy su Render OK
+- [ ] Regression test passati
+- [ ] Assistente Vapi creato
+- [ ] System prompt incollato
+- [ ] Knowledge Base caricata
+- [ ] 11 tool configurati (9 HTTP + end_call + transfer)
+- [ ] Tool descriptions aggiunte (check_openings, end_call)
+- [ ] expected_weekday aggiunto in check_openings parameters
+- [ ] Transcriber/Voice configurati (italiano)
+- [ ] Numero Twilio assegnato
+- [ ] 6 test chiamata vocale passati
+- [ ] `/metrics` verificato
+- [ ] Ristorante operativo
