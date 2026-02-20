@@ -38,11 +38,14 @@ Ogni variabile in `.env` locale deve esistere anche su **Render → Environment 
 
 ## 5. Vapi
 - [ ] Creato/clonato Assistant
-- [ ] System Prompt incollato
+- [ ] System Prompt incollato (cambiare: restaurant_id, nome receptionist, transfer_call_tool_<id>, is_open_now)
 - [ ] File FAQ caricato in Knowledge Base
-- [ ] TUTTI i tool HTTP configurati (9 tool)
+- [ ] 9 Tool HTTP configurati (check_openings, create/list/modify/cancel_booking, resolve_relative_day/time, is_open_now, send_sms)
+- [ ] Tool nativo `end_call` configurato (tipo: End Call)
+- [ ] Tool nativo `transfer_call_tool_<restaurant_id>` configurato (tipo: Transfer Call, numero = telefono reale ristorante)
 - [ ] Tool `faq` NON configurato (usa Knowledge Base)
-- [ ] Test in chat superati (prenota, modifica, cancella, orari, FAQ)
+- [ ] expected_weekday aggiunto nei parameters di check_openings
+- [ ] Test in chat superati (prenota, modifica, cancella, orari, FAQ, handover)
 
 ## 6. Telefono
 - [ ] Numero Twilio assegnato all'Assistant

@@ -1526,6 +1526,10 @@ async function run() {
     await testDoubleBookingSamePhone();
     await testCreateBookingOutsideHours();
     await testCheckOpeningsEdgeCases();
+
+    // v2.2 Phone Fallback Tests
+    console.log(`\n${YELLOW}──── v2.2 Phone Fallback (Vapi caller metadata) ────${RESET}`);
+    await testPhoneFallback();
   } catch (err) {
     console.log(`\n${RED}ERRORE FATALE: ${err.message}${RESET}`);
     console.log(`Verifica che il server sia avviato su ${BASE_URL}`);
@@ -1548,6 +1552,145 @@ async function run() {
   }
 
   process.exit(failedTests > 0 ? 1 : 0);
+}
+
+// ─────────────────────────────────────────────
+// v2.2 Phone Fallback Tests (Vapi caller metadata)
+// ─────────────────────────────────────────────
+
+async function testPhoneFallback() {
+  console.log(`\n${CYAN}[Phone Fallback] Vapi caller metadata tests${RESET}`);
+
+  const tomorrow = getTomorrow();
+  const callerPhone = '+393339999001';
+  const differentPhone = '+393339999002';
+
+  // Helper: build a Vapi-format payload with customer metadata
+  function vapiPayload(toolName, args, customerNumber) {
+    const payload = {
+      message: {
+        type: 'tool-calls',
+        toolCalls: [
+          {
+            id: 'test-tc-' + Date.now(),
+            function: {
+              name: toolName,
+              arguments: args
+            }
+          }
+        ]
+      }
+    };
+    if (customerNumber) {
+      payload.message.customer = { number: customerNumber };
+    }
+    return payload;
+  }
+
+  // TEST 1: create_booking — args.phone missing, caller number present → should use caller_fallback
+  {
+    const body = vapiPayload('create_booking', {
+      restaurant_id: 'roma',
+      day: tomorrow,
+      time: '20:00',
+      people: 2,
+      name: 'Test Fallback'
+    }, callerPhone);
+
+    const r = await post('/api/create_booking', body);
+    const result = r.results && r.results[0] && r.results[0].result;
+    const parsed = result ? JSON.parse(result) : {};
+    assert(
+      'Phone fallback: args.phone missing + caller present → booking OK',
+      parsed.ok === true,
+      parsed.ok,
+      true
+    );
+
+    // Cleanup: cancel the booking
+    if (parsed.booking_id) {
+      await post('/api/cancel_booking', { restaurant_id: 'roma', booking_id: parsed.booking_id });
+    }
+  }
+
+  // TEST 2: create_booking — args.phone valid and different from caller → should preserve args.phone
+  {
+    const body = vapiPayload('create_booking', {
+      restaurant_id: 'roma',
+      day: tomorrow,
+      time: '20:30',
+      people: 2,
+      name: 'Test DifferentPhone',
+      phone: differentPhone
+    }, callerPhone);
+
+    const r = await post('/api/create_booking', body);
+    const result = r.results && r.results[0] && r.results[0].result;
+    const parsed = result ? JSON.parse(result) : {};
+    assert(
+      'Phone fallback: args.phone valid + different from caller → booking OK (uses args)',
+      parsed.ok === true,
+      parsed.ok,
+      true
+    );
+
+    // Verify the booking was saved with the args phone (differentPhone), not caller
+    if (parsed.booking_id) {
+      const listBody = vapiPayload('list_bookings', {
+        restaurant_id: 'roma',
+        phone: differentPhone
+      }, callerPhone);
+      const listR = await post('/api/list_bookings', listBody);
+      const listResult = listR.results && listR.results[0] && listR.results[0].result;
+      const listParsed = listResult ? JSON.parse(listResult) : {};
+      const found = (listParsed.results || []).some(b => b.booking_id === parsed.booking_id);
+      assert(
+        'Phone fallback: booking saved with args.phone (not caller)',
+        found === true,
+        found,
+        true
+      );
+
+      await post('/api/cancel_booking', { restaurant_id: 'roma', booking_id: parsed.booking_id });
+    }
+  }
+
+  // TEST 3: list_bookings — args.phone missing + caller present → should use caller_fallback (no error)
+  {
+    const body = vapiPayload('list_bookings', {
+      restaurant_id: 'roma'
+    }, callerPhone);
+
+    const r = await post('/api/list_bookings', body);
+    const result = r.results && r.results[0] && r.results[0].result;
+    const parsed = result ? JSON.parse(result) : {};
+    assert(
+      'Phone fallback: list_bookings with no args.phone + caller present → ok',
+      parsed.ok === true,
+      parsed.ok,
+      true
+    );
+  }
+
+  // TEST 4: create_booking — both args.phone and caller missing → VALIDATION_ERROR
+  {
+    const body = vapiPayload('create_booking', {
+      restaurant_id: 'roma',
+      day: tomorrow,
+      time: '20:00',
+      people: 2,
+      name: 'Test NoPhone'
+    }, null);
+
+    const r = await post('/api/create_booking', body);
+    const hasError = r.results && r.results[0] && r.results[0].error;
+    assert(
+      'Phone fallback: no args.phone + no caller → VALIDATION_ERROR',
+      hasError && hasError.includes('VALIDATION_ERROR'),
+      hasError,
+      'VALIDATION_ERROR'
+    );
+  }
 }
 
 run();

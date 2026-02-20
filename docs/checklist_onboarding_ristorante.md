@@ -1,41 +1,65 @@
-# ✅ **FILE 2 — `docs/checklist_onboarding_ristorante.md` (AGGIORNATO)**
-
-```md
 # Checklist Onboarding Nuovo Ristorante – AI Receptionist VAPI
 
-## 1. Google Workspace
-- [ ] Creato Google Sheet con struttura:
-      booking_id | day | time | people | name | phone | notes | created_at | event_id
-- [ ] Recuperato `sheet_id`
-- [ ] Creato Google Calendar dedicato alle prenotazioni
-- [ ] Condiviso il Calendario con Service Account (permesso modifica)
-- [ ] Recuperato `calendar_id`
+> Per la guida completa passo-passo vedi: `onboarding/ONBOARDING-RESTAURANT.md`
+
+## 1. Dati ristorante
+- [ ] Nome, indirizzo, telefono
+- [ ] Orari apertura (pranzo/cena per ogni giorno)
+- [ ] Giorni chiusura + chiusure straordinarie
+- [ ] Max persone per prenotazione
+- [ ] Capacità contemporanea + durata media permanenza + cutoff
+- [ ] FAQ confermate con il ristorante
+- [ ] Backend scelto (resOS / OctoTable / Sheets)
+- [ ] Credenziali API (se gestionale)
 
 ## 2. Backend
-- [ ] Creato KB: `kb/<restaurant_id>.json` copiando `docs/template_kb_ristorante.json`
-- [ ] Configurati correttamente le aperture/orari (`openings`) e FAQ
+- [ ] Creato `kb/<restaurant_id>.json` (da template)
+- [ ] Creato `kb/<restaurant_id>-faq-vapi.md`
 - [ ] Aggiornato `src/config/ristoranti.json`
-- [ ] Controllato JSON valido
-- [ ] Aggiornato `.env` con `TWILIO_PHONE_NUMBER`
-- [ ] Deploy su Render
-- [ ] `/status` OK
+- [ ] Se Sheets: creato Sheet + Calendar + condiviso con Service Account
+- [ ] Se resOS: aggiunto `resos_api_key_env` + chiave in `.env` + Render Env Vars
+- [ ] Se OctoTable: aggiunto `octotable_client_id_env` e `octotable_client_secret_env` + credenziali in `.env` + Render Env Vars
+- [ ] JSON valido (no errori syntax)
 
-## 3. Vapi Assistant
-- [ ] Clonato assistant base
-- [ ] Aggiornato Prompt con (nome + restaurant_id)
-- [ ] Tools API collegati al backend Render e Configurati TUTTI i 7 Tools:
-      check_openings, create_booking, list_bookings,
-      modify_booking, cancel_booking, faq, send_sms
-- [ ] Test in chat superati
+## 3. Environment Variables
+- [ ] Tutte le variabili `.env` presenti anche su Render → Environment Variables
 
-## 4. Twilio
-- [ ] Numero configurato - Assegnato numero al ristorante
-- [ ] Voice URL → Assistant Vapi
-- [ ] Test chiamata reale effettuato
+## 4. Prompt
+- [ ] Creato `prompts/System-Prompt-Receptionist_<restaurant_id>.md` (copia da esistente)
+- [ ] Cambiato `restaurant_id` nel prompt
+- [ ] Cambiato nome receptionist (es. "Alice" → "Giulia")
+- [ ] Cambiato `transfer_call_tool_<restaurant_id>` nel prompt
+- [ ] Cambiato `is_open_now(restaurant_id="<id>")` nel prompt
+- [ ] Versione prompt corretta nel titolo
 
-## 5. Test Finali
-- [ ] Prenota → OK
-- [ ] Modifica → OK
-- [ ] Cancella → OK
-- [ ] FAQ → OK
-- [ ] Ristorante è LIVE
+## 5. Deploy
+- [ ] Commit + push
+- [ ] Render build OK
+- [ ] `GET /status` → `{ ok: true }`
+- [ ] `node scripts/regression-tests.js <URL>` → tutto PASS
+
+## 6. Vapi Assistant
+- [ ] Creato/clonato Assistant
+- [ ] System Prompt incollato
+- [ ] File FAQ caricato in Knowledge Base
+- [ ] 9 Tool HTTP configurati (check_openings, create/list/modify/cancel_booking, resolve_relative_day/time, is_open_now, send_sms)
+- [ ] Tool nativo `end_call` configurato (tipo: End Call)
+- [ ] Tool nativo `transfer_call_tool_<restaurant_id>` configurato (tipo: Transfer Call, numero = telefono reale ristorante)
+- [ ] Tool `faq` NON configurato (usa Knowledge Base)
+- [ ] `expected_weekday` aggiunto nei parameters di check_openings
+- [ ] Transcriber: lingua italiana, "Use Numerals" attivato
+- [ ] Voice: voce italiana selezionata
+
+## 7. Telefono
+- [ ] Numero Twilio assegnato all'Assistant
+- [ ] Test chiamata vocale OK
+
+## 8. Test finale (minimo 6 test)
+- [ ] Prenotazione completa → compare nel gestionale/Sheet
+- [ ] Modifica → aggiornata
+- [ ] Cancellazione → rimossa
+- [ ] Orari ("siete aperti domani?") → risponde correttamente
+- [ ] Giorno chiuso → dice chiuso + propone alternativa
+- [ ] Handover ("vorrei parlare con qualcuno") → trasferisce chiamata
+- [ ] `/metrics` → nessun errore anomalo
+- [ ] Ristorante LIVE

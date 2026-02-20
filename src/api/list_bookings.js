@@ -65,6 +65,23 @@ function extractVapiContext(req) {
   };
 }
 
+/**
+ * Extracts the caller's phone number from the Vapi webhook metadata.
+ * Checks message.customer.number (primary, per OpenAPI spec) then message.call.customer.number (secondary).
+ */
+function getCallerNumberFromVapi(message) {
+  if (!message) return null;
+  const n1 = message.customer?.number;
+  if (n1 && typeof n1 === 'string') return n1.trim();
+  const n2 = message.call?.customer?.number;
+  if (n2 && typeof n2 === 'string') return n2.trim();
+  return null;
+}
+
+function isValidE164(s) {
+  return typeof s === 'string' && /^\+\d{8,15}$/.test(s);
+}
+
 module.exports = async function listBookings(req, res) {
   try {
     const body = req.body || {};
@@ -77,6 +94,16 @@ module.exports = async function listBookings(req, res) {
 
     restaurant_id = restaurant_id && String(restaurant_id).trim();
     phone = phone && String(phone).trim();
+
+    // --- PHONE FALLBACK (Vapi only) ---
+    let phoneSource = 'args';
+    if (isVapi) {
+      const callerNumber = getCallerNumberFromVapi(body.message);
+      if (!isValidE164(phone) && isValidE164(callerNumber)) {
+        phone = callerNumber;
+        phoneSource = 'caller_fallback';
+      }
+    }
 
     // VALIDAZIONE STRICT
     if (!restaurant_id || !phone) {
@@ -128,6 +155,7 @@ const resultList = Array.isArray(result && result.results) ? result.results : []
     logger.info('list_bookings_success', {
       restaurant_id,
       phone,
+      phone_source: phoneSource,
       count: resultList.length,
       booking_ids: resultList.map(b => b.booking_id).slice(0, 5),
       source: isVapi ? 'vapi' : 'http',

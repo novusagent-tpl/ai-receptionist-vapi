@@ -1,5 +1,5 @@
 # AI-Receptionist-VAPI — CONTEXT (Single Source of Truth)
-# Ultimo aggiornamento: 18 febbraio 2026
+# Ultimo aggiornamento: 19 febbraio 2026
 
 ## Cos'è il progetto
 AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risponde un'assistente AI che gestisce prenotazioni, orari, modifiche, cancellazioni, FAQ e handover verso il personale. Il sistema è multi-ristorante e multi-gestionale.
@@ -17,9 +17,9 @@ AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risp
 
 | ID | Nome | Gestionale | Stato |
 |----|------|-----------|-------|
-| roma | Ristorante Roma (test) | Google Sheets/Calendar | Test in corso |
-| modena01 | Da Michele | resOS | Testato parzialmente |
-| octodemo | OctoDemo (sandbox) | OctoTable | Testato parzialmente |
+| roma | Ristorante Roma (test) | Google Sheets/Calendar | Test V2.1 completati (22 test) |
+| modena01 | Da Michele | resOS | Da testare con v2.2 |
+| octodemo | OctoDemo (sandbox) | OctoTable | Da testare con v2.2 |
 
 ---
 
@@ -31,7 +31,7 @@ AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risp
 | create_booking | /api/create_booking | Crea prenotazione. Verifica capacità server-side per Sheets. Restituisce `message`, `day_label`, `time_human`. |
 | modify_booking | /api/modify_booking | Modifica prenotazione. Restituisce `message`, `day_label`, `time_human`. |
 | cancel_booking | /api/cancel_booking | Cancella prenotazione. |
-| list_bookings | /api/list_bookings | Lista prenotazioni future per telefono. Include `day_label` e `message`. Filtra canceled/deleted per resOS. |
+| list_bookings | /api/list_bookings | Lista prenotazioni future per telefono. Include `day_label`, `time_human` e `message` (formato parlato). Filtra canceled/deleted per resOS. |
 | resolve_relative_day | /api/resolve_relative_day | Converte "domani", "sabato", ecc. in data ISO + `day_label`. |
 | resolve_relative_time | /api/resolve_relative_time | Converte "tra 2 ore", "mezz'ora" in HH:MM. Accetta anche orari assoluti come fallback. Supporta "X e mezza", "X e un quarto". |
 | is_open_now | /api/is_open_now | Verifica se il ristorante è aperto ora (per handover). |
@@ -55,6 +55,7 @@ AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risp
 ### time_human / nearest_slots_human
 - Orari in formato italiano parlato (es. "20 e 30" invece di "20:30").
 - Evita problemi TTS (colon letto male, numeri in inglese).
+- Presente in: check_openings, create_booking, modify_booking, list_bookings.
 
 ### expected_weekday (WEEKDAY_MISMATCH)
 - Se il cliente dice un weekday, l'AI passa `expected_weekday` a check_openings.
@@ -83,15 +84,20 @@ AI Receptionist telefonica per ristoranti. Un cliente chiama il ristorante, risp
 ### Next open day
 - Quando un giorno è chiuso, il backend cerca il prossimo giorno aperto (max 7 giorni) e lo include nel `message`.
 
+### Logging corretto (v2.1)
+- `create_booking`, `modify_booking`, `cancel_booking`: log `_success` solo se `result.ok === true`.
+- Se `result.ok === false` (DUPLICATE_BOOKING, SLOT_FULL, BOOKING_NOT_FOUND, ecc.): log `_rejected` a livello `warn` con `error_code`.
+- Le metriche su `/metrics` riflettono correttamente successi vs rifiuti.
+
 ---
 
-## System Prompt — Versione attuale: v2.0
+## System Prompt — Versione attuale: v2.2
 
 ### File prompt
-- `prompts/System-Prompt-ReceptionistV2.md` — Roma (Alice)
-- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (Giulia)
-- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (Sofia)
-- `prompts/SYSTEM-PROMPT-base-18_02.md` — Backup v1.4 pre-pulizia
+- `prompts/System-Prompt-ReceptionistV2.md` — Roma (Alice) v2.2
+- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (Giulia) v2.2
+- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (Sofia) v2.2
+- `prompts/SYSTEM-PROMPT-base-18_02.md` — Backup v1.4 pre-pulizia (NON TOCCARE MAI)
 
 ### Struttura prompt (4 sezioni)
 1. **CORE RULES** — Regole logiche infrangibili, divieti assoluti
@@ -105,6 +111,13 @@ Solo 4 campi cambiano per ristorante:
 - Nome receptionist (Alice / Giulia / Sofia)
 - `transfer_call_tool_<id>`
 - `is_open_now(restaurant_id="<id>")`
+
+### Regole chiave nel prompt v2.2
+- **CONSERVAZIONE DATI**: persone/nome/telefono non si perdono durante negoziazione slot
+- **REGOLA MESSAGE**: usare il testo del campo `message` così com'è, non riformulare orari
+- **REGOLA TIME_HUMAN**: usare `time_human` e `nearest_slots_human` per dire orari al cliente
+- **REGOLA SALUTO INIZIALE**: prima risposta del cliente ("salve", "ciao") = apertura, NON chiusura → NON endCall
+- **REGOLA DOPPIO SALUTO**: dopo saluto di chiusura dell'AI, se cliente dice "ciao" → endCall immediato
 
 ---
 
@@ -157,26 +170,36 @@ Solo 4 campi cambiano per ristorante:
 - `time_human` e `message` di conferma in create_booking e modify_booking
 - `day_label` in entrambi
 
+### Test V2.0 + Fix v2.1/v2.2 ✅ (19 febbraio 2026)
+- 15 test Vapi Roma con prompt v2.0: 12 PASS, 2 con difetti importanti, 1 PARZIALE
+- Fix v2.1 backend: `list_bookings` → `formatTimeHuman` nel message e `time_human` per ogni booking
+- Fix v2.1 backend: logging corretto in create/modify/cancel_booking (`_success` solo se ok, `_rejected` per errori business)
+- Fix v2.1 prompt: CONSERVAZIONE DATI, REGOLA MESSAGE/TIME_HUMAN rinforzate, endCall doppio ciao
+- Fix v2.2 prompt: REGOLA SALUTO INIZIALE (prima risposta cliente = apertura), REGOLA DOPPIO SALUTO riformulata
+- 7 re-test V2.1: 7/7 PASS (4 puliti, 3 con difetto cosmetico AI riformula orari)
+- Fix logging confermato: DUPLICATE_BOOKING ora logga `create_booking_rejected` ✅
+- Fix CONSERVAZIONE DATI confermato: persone mantenute durante negoziazione slot ✅
+- Fix endCall saluto iniziale confermato: "Salve" di apertura non chiude più la chiamata ✅
+
 ---
 
 ## Test — Stato attuale
 
 ### Regression tests backend (scripts/regression-tests.js) ✅
-- Tutti passati (locale + Render) per roma, modena01, octodemo
+- 230/230 PASS (locale) per roma, modena01, octodemo
+- Eseguiti il 19/02/2026 dopo fix logging
 
-### Test Vapi Roma (Sheets/Calendar)
+### Test Vapi Roma (Sheets/Calendar) ✅
 - File: `docs/Test_Attivazione/test_vapi_roma_sheets_v2.md`
-- **Parte 1 (R1–R9)**: completata, problemi risolti con refactor backend
-- **Parte 2 (RC1–RE2)**: completata, fix day_label per list_bookings
-- **Parte 3 (RF1–RJ2)**: testata con prompt v1.4, da ri-testare con v2.0
-- Ri-test RG2, RH2, RG3 dopo fix TTS: tutti PASS
+- **Test V2.0** (15 test): completati, 12 PASS + 2 con difetti importanti + 1 PARZIALE
+- **Re-test V2.1** (7 test): completati, 7/7 PASS
+- **Difetto residuo**: AI riformula orari dal message ("12 e 30" → "12.30") — comportamento del modello, TTS legge comunque in italiano. Non critico.
 
 ### Test Vapi Modena01 (resOS)
-- Test parziali fino a H3 completati
-- Da fare: test rapidi post-refactor (5-6 test chiave)
+- Da fare: test rapidi post-v2.2 (5-6 test chiave)
 
 ### Test Vapi OctoDemo (OctoTable)
-- Da fare: test rapidi (5-6 test chiave)
+- Da fare: test rapidi post-v2.2 (5-6 test chiave)
 
 ---
 
@@ -210,13 +233,25 @@ Il tool `faq` esiste nel backend ma non è usato su Vapi — le FAQ sono nella K
 
 ## Prossimi passi
 
-1. **Ri-test RF1–RJ2** con prompt v2.0
-2. **Test rapidi Modena01** (5-6 test chiave)
-3. **Test rapidi OctoDemo** (5-6 test chiave)
-4. **H1 — Label fasce orarie personalizzabili** (per ristoranti con colazione/apertura continua)
-5. **Onboarding primo ristorante reale**
+1. **Test rapidi Modena01** (5-6 test chiave con prompt v2.2)
+2. **Test rapidi OctoDemo** (5-6 test chiave con prompt v2.2)
+3. **H1 — Label fasce orarie personalizzabili** (per ristoranti con colazione/apertura continua)
+4. **Onboarding primo ristorante reale**
+5. **Aggiornare `ristoranti.json`** con `prompt_version: "v2.2"` per roma, modena01, octodemo
 6. (Futuro) WhatsApp Business integration
 7. (Futuro) Dashboard monitoraggio automatico
+8. (Futuro) App gestionale staff (form web multi-ristorante per prenotazioni su Sheets)
+
+---
+
+## Deploy — Regole importanti
+
+- **NON usiamo git per il deploy.** Tutto è in locale.
+- Backend: upload manuale dei file su Render.
+- Prompt: copia-incolla manuale su Vapi (system prompt di ogni assistente).
+- Il file base `prompts/SYSTEM-PROMPT-base-18_02.md` NON va mai toccato.
+- Il file `docs/System-Prompt-Receptionist.md` è il vecchio prompt v1 — NON toccarlo.
+- Ogni modifica ai prompt deve essere applicata a TUTTI E 3 i ristoranti.
 
 ---
 
@@ -225,10 +260,10 @@ Il tool `faq` esiste nel backend ma non è usato su Vapi — le FAQ sono nella K
 ### Backend
 - `src/server-vapi.js` — Server Express, routing
 - `src/api/check_openings.js` — Verifica apertura e disponibilità
-- `src/api/create_booking.js` — Crea prenotazione
-- `src/api/modify_booking.js` — Modifica prenotazione
-- `src/api/cancel_booking.js` — Cancella prenotazione
-- `src/api/list_bookings.js` — Lista prenotazioni
+- `src/api/create_booking.js` — Crea prenotazione (+ logging corretto v2.1)
+- `src/api/modify_booking.js` — Modifica prenotazione (+ logging corretto v2.1)
+- `src/api/cancel_booking.js` — Cancella prenotazione (+ logging corretto v2.1)
+- `src/api/list_bookings.js` — Lista prenotazioni (+ formatTimeHuman v2.1)
 - `src/api/resolve_relative_day.js` — Risolve giorni relativi
 - `src/api/resolve_relative_time.js` — Risolve orari relativi
 - `src/api/is_open_now.js` — Verifica apertura attuale
@@ -248,16 +283,18 @@ Il tool `faq` esiste nel backend ma non è usato su Vapi — le FAQ sono nella K
 ### KB
 - `kb/roma.json` — KB Roma
 - `kb/modena01.json` — KB Modena01
+- `kb/octodemo.json` — KB OctoDemo
 
 ### Prompt
-- `prompts/System-Prompt-ReceptionistV2.md` — Roma (v2.0)
-- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (v2.0)
-- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (v2.0)
+- `prompts/System-Prompt-ReceptionistV2.md` — Roma (v2.2)
+- `prompts/System-Prompt-Receptionist_modena01.md` — Modena01 (v2.2)
+- `prompts/System-Prompt-Receptionist_octodemo.md` — OctoDemo (v2.2)
 
 ### Test
-- `scripts/regression-tests.js` — Test backend automatizzati
-- `docs/Test_Attivazione/test_vapi_roma_sheets_v2.md` — Test Vapi Roma
+- `scripts/regression-tests.js` — Test backend automatizzati (230 test)
+- `docs/Test_Attivazione/test_vapi_roma_sheets_v2.md` — Test Vapi Roma (22 test)
 
 ### Docs
 - `docs/ROADMAP-SAAS.md` — Roadmap completa del progetto
+- `docs/TOOLS-CONTRACT.md` — Contratti API di ogni tool
 - `docs/CONTEXT.txt` — Questo file

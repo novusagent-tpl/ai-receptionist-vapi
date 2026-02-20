@@ -57,6 +57,23 @@ function extractVapiContext(req) {
   };
 }
 
+/**
+ * Extracts the caller's phone number from the Vapi webhook metadata.
+ * Checks message.customer.number (primary, per OpenAPI spec) then message.call.customer.number (secondary).
+ */
+function getCallerNumberFromVapi(message) {
+  if (!message) return null;
+  const n1 = message.customer?.number;
+  if (n1 && typeof n1 === 'string') return n1.trim();
+  const n2 = message.call?.customer?.number;
+  if (n2 && typeof n2 === 'string') return n2.trim();
+  return null;
+}
+
+function isValidE164(s) {
+  return typeof s === 'string' && /^\+\d{8,15}$/.test(s);
+}
+
 module.exports = async function createBooking(req, res) {
   try {
     const body = req.body || {};
@@ -83,6 +100,16 @@ module.exports = async function createBooking(req, res) {
     name = name && String(name).trim();
     phone = phone && String(phone).trim();
     notes = notes != null ? String(notes).trim() : null;
+
+    // --- PHONE FALLBACK (Vapi only) ---
+    let phoneSource = 'args';
+    if (isVapi) {
+      const callerNumber = getCallerNumberFromVapi(body.message);
+      if (!isValidE164(phone) && isValidE164(callerNumber)) {
+        phone = callerNumber;
+        phoneSource = 'caller_fallback';
+      }
+    }
 
     const peopleNum = Number(people);
 
@@ -235,6 +262,7 @@ if (bookingDt < now.plus({ minutes: 10 })) {
         time,
         people: peopleNum,
         phone,
+        phone_source: phoneSource,
         booking_id: result.booking_id,
         source: isVapi ? 'vapi' : 'http',
         request_id: req.requestId || null,
@@ -257,6 +285,7 @@ if (bookingDt < now.plus({ minutes: 10 })) {
         time,
         people: peopleNum,
         phone,
+        phone_source: phoneSource,
         error_code: result.error_code || 'UNKNOWN',
         error_message: result.error_message || null,
         source: isVapi ? 'vapi' : 'http',

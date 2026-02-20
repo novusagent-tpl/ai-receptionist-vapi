@@ -9,7 +9,7 @@
     "sms_number": "+39XXXXXXXXXX",
     "max_people": 8,
     "reservations_backend": "sheets",
-    "prompt_version": "v1.0"
+    "prompt_version": "v2.2"
   },
 
   "modena01": {
@@ -24,7 +24,7 @@
     "reservations_backend": "resos",
     "resos_restaurant_id": "JLAs2CviunNCSEfbt",
     "resos_api_key_env": "RESOS_API_KEY",
-    "prompt_version": "v1.0"
+    "prompt_version": "v2.2"
   },
 
   "milano01": {
@@ -60,7 +60,7 @@
     "octotable_room_id": "26157",
     "octotable_client_id_env": "OCTOTABLE_CLIENT_ID",
     "octotable_client_secret_env": "OCTOTABLE_CLIENT_SECRET",
-    "prompt_version": "v1.0-octodemo",
+    "prompt_version": "v2.2",
     "_note": "Demo OctoTable sandbox. Property sandbox, 3 tavoli da 4 posti. Servizi: Lunch (39492) 12-15, Dinner (39491) 19-23."
   }
 }
