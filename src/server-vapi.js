@@ -74,11 +74,13 @@ app.use((req, res, next) => {
 
   // Prompt version dal config ristorante
   try {
-    const { getRestaurantConfig } = require('./config/restaurants');
+    const { getRestaurantConfig, getReleaseChannel } = require('./config/restaurants');
     const cfg = restaurantId ? getRestaurantConfig(restaurantId) : null;
     req.promptVersion = cfg ? (cfg.prompt_version || null) : null;
+    req.releaseChannel = restaurantId ? getReleaseChannel(restaurantId) : null;
   } catch {
     req.promptVersion = null;
+    req.releaseChannel = null;
   }
 
   // Log ogni richiesta API (solo /api/)
@@ -90,6 +92,7 @@ app.use((req, res, next) => {
       restaurant_id: req.restaurantId,
       backend_used: req.backendUsed,
       prompt_version: req.promptVersion,
+      release_channel: req.releaseChannel,
       call_id: req.callId,
       conversation_id: req.conversationId,
     });

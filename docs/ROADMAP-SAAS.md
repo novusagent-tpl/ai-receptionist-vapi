@@ -610,6 +610,36 @@ Contiene:
 
 ---
 
+### H2. SMS template backend (non generati dall'AI)
+**Obiettivo:** Spostare la generazione del testo SMS dal modello LLM al backend, con template fissi per ogni tipo di evento (creazione, modifica, cancellazione). Includere disclaimer sul numero mittente.
+
+**Problema attuale:** L'AI compone il testo dell'SMS e lo passa a `send_sms`. Il testo può variare ogni volta, essere troppo lungo/corto, o contenere errori. Il cliente potrebbe confondere il numero Twilio con quello del ristorante.
+
+**Cosa serve:**
+- [ ] Template SMS fissi nel backend per: conferma prenotazione, modifica, cancellazione
+- [ ] Il template include automaticamente i dati dalla prenotazione (giorno, ora, persone, nome, ristorante)
+- [ ] Footer standard in ogni SMS: "Questo numero è solo per messaggi. Per contattare il ristorante: [telefono ristorante dalla KB]"
+- [ ] Un unico numero Twilio mittente per tutti i ristoranti (costo ridotto)
+- [ ] Il tool `send_sms` cambia: l'AI passa solo `restaurant_id`, `to`, `type` (confirm/modify/cancel) e `booking_id` — il backend compone il messaggio
+- [ ] Oppure: l'SMS parte automaticamente dal backend dopo `create_booking`/`modify_booking`/`cancel_booking` senza che l'AI lo chiami (approccio più robusto)
+
+**Esempio SMS:**
+```
+Prenotazione confermata!
+📅 Giovedì 20 febbraio, ore 20:30
+👥 3 persone - Marco
+🍽️ Ristorante Roma
+
+Per contattare il ristorante: +39 06 1234567
+Questo numero è solo per messaggi automatici.
+```
+
+**Priorità:** 🟡 MEDIA (miglioramento UX, non bloccante per lancio)
+
+**Status:** [ ] Da fare
+
+---
+
 ## COSA NON FARE ORA
 
 - ❌ Non toccare backend "per provare" senza motivo
@@ -651,6 +681,7 @@ Contiene:
 | F2 | Rischi Sheets/Calendar | 🟡 MEDIA | F1 | [ ] Documentato |
 | G1 | WhatsApp Business chatbot | 🟡 MEDIA | D2, lancio voce | [ ] |
 | H1 | Label fasce orarie personalizzabili | 🟠 MEDIA-ALTA | D2 | [ ] |
+| H2 | SMS template backend + disclaimer numero | 🟡 MEDIA | - | [ ] |
 
 **Legenda:** 🔴 Bloccante per test/lancio | 🟠 Importante pre-lancio | 🟡 Può aspettare
 
@@ -696,4 +727,255 @@ Contiene:
 
 ---
 
-*Ultimo aggiornamento: 2026-02-18*
+## PACCHETTI COMMERCIALI E AUTOMAZIONI PREMIUM
+
+### Struttura a 3 livelli
+
+**BASE — "Segretaria" (~69/mese, 100 min inclusi, extra 0,20/min)**
+
+L'AI risponde al telefono, gestisce FAQ e trasferisce allo staff per le prenotazioni.
+
+- AI risponde 24/7
+- FAQ (orari, indirizzo, menu, parcheggio, allergie, eventi)
+- Trasferimento chiamata allo staff
+- NO gestione prenotazioni (trasferisce)
+- NO SMS conferma
+- Target: ristorante che vuole non perdere chiamate ma gestisce le prenotazioni internamente
+
+**PRO — "Receptionist" (~149/mese, 250 min inclusi, extra 0,18/min)**
+
+L'AI gestisce tutto: prenotazioni, modifiche, cancellazioni, FAQ. Lo staff non risponde al telefono.
+
+- Tutto BASE +
+- Crea/modifica/cancella prenotazioni
+- Verifica disponibilita in tempo reale
+- SMS conferma prenotazione
+- Collegamento al gestionale (resOS, OctoTable, Google Sheets)
+- Report mensile (chiamate, prenotazioni, orari di punta, tasso conversione)
+- Target: ristorante che vuole automatizzare completamente la gestione telefonica
+
+**PREMIUM — "Direttore di Sala AI" (~249/mese, 500 min inclusi, extra 0,15/min)**
+
+Tutto PRO + automazioni avanzate per ridurre no-show, ottenere recensioni e raggiungere piu clienti.
+
+- Tutto PRO +
+- Promemoria prenotazione automatico (anti no-show)
+- Richiesta recensione automatica post-visita
+- Canale WhatsApp (prenotazione via chat)
+- Multilingua (italiano + inglese per turisti)
+- Target: ristorante con alto volume, clientela turistica, o problema no-show
+
+### Note sui prezzi
+
+- I minuti inclusi coprono le chiamate AI (Vapi LLM + TTS + transcriber + Twilio telefonia)
+- Il costo reale per minuto e circa 0,13-0,17 EUR
+- Il gestionale (resOS, OctoTable) non e incluso — il ristorante usa il suo o Google Sheets (gratis)
+- Il risparmio per il ristorante: una persona al telefono costa 1.200-1.500 EUR/mese (part-time)
+
+---
+
+## Fase I — Automazioni Premium
+
+### I1. Promemoria prenotazione automatico (anti no-show)
+
+**Obiettivo:** 24 ore prima della prenotazione, mandare SMS (o WhatsApp) al cliente per ricordargli la prenotazione e dargli la possibilita di confermare o cancellare.
+
+**Perche serve:** I no-show costano ai ristoranti migliaia di euro/anno. Ridurli del 30-40% con un semplice promemoria giustifica da solo il costo del pacchetto Premium.
+
+**Messaggio tipo:**
+```
+Promemoria: domani, giovedi 20 febbraio, ore 20:30
+4 persone - nome Marco
+Ristorante Roma
+
+Per cancellare o modificare, chiami il [numero ristorante].
+```
+
+**Implementazione:**
+- [ ] Endpoint `/cron/reminders` nel backend attuale (stesso progetto Node.js)
+- [ ] Il cron legge le prenotazioni del giorno dopo da tutti i gestionali (Sheets, resOS, OctoTable)
+- [ ] Per ogni prenotazione, manda SMS via Twilio (o WhatsApp se Premium)
+- [ ] Cron esterno (es. cron-job.org gratuito) chiama l'endpoint ogni 30 minuti
+- [ ] Flag `reminder_sent` per non mandare duplicati
+- [ ] Template SMS fisso (non generato dall'AI)
+- [ ] Configurabile per ristorante: on/off, quante ore prima (default 24h)
+- [ ] Log: `reminder_sent`, `reminder_failed` con restaurant_id e booking_id
+
+**Non passa da Vapi** — e puro backend (lettura prenotazioni + invio Twilio).
+
+**Priorita:** MEDIA (feature Premium, non bloccante per lancio BASE/PRO)
+
+**Status:** [ ] Da fare
+
+---
+
+### I2. Richiesta recensione automatica post-visita
+
+**Obiettivo:** 2-3 ore dopo l'orario della prenotazione, mandare SMS (o WhatsApp) al cliente con link diretto alla pagina recensioni Google del ristorante.
+
+**Perche serve:** Le recensioni Google sono fondamentali per i ristoranti. Chiedere al momento giusto (subito dopo la cena) aumenta il tasso di risposta. I ristoranti lo farebbero manualmente ma non hanno tempo.
+
+**Messaggio tipo:**
+```
+Grazie per aver cenato da Ristorante Roma!
+Se le e piaciuta l'esperienza, ci farebbe piacere una recensione:
+[link Google Reviews]
+
+A presto!
+```
+
+**Implementazione:**
+- [ ] Endpoint `/cron/reviews` nel backend attuale
+- [ ] Il cron legge le prenotazioni di oggi il cui orario e passato da almeno 2-3 ore
+- [ ] Per ogni prenotazione, manda SMS con link recensione
+- [ ] Link Google Reviews configurabile per ristorante nella KB (`google_reviews_url`)
+- [ ] Flag `review_request_sent` per non mandare duplicati
+- [ ] Template SMS fisso
+- [ ] Configurabile per ristorante: on/off, ore di ritardo (default 3h)
+- [ ] Non mandare se la prenotazione e stata cancellata
+- [ ] Log: `review_request_sent`, `review_request_failed`
+
+**Non passa da Vapi** — e puro backend.
+
+**Priorita:** MEDIA (feature Premium)
+
+**Status:** [ ] Da fare
+
+---
+
+### I3. Report mensile (PRO + Premium)
+
+**Obiettivo:** Generare un report mensile con statistiche sulle chiamate e prenotazioni per ogni ristorante.
+
+**Metriche nel report:**
+- Chiamate totali / media giornaliera
+- Prenotazioni create / modificate / cancellate
+- Orari di punta (quali ore ricevono piu chiamate)
+- Tasso di conversione (chiamate -> prenotazioni)
+- Motivi di rifiuto piu frequenti (SLOT_FULL, OUTSIDE_HOURS, MAX_PEOPLE_EXCEEDED)
+- No-show (se tracciati)
+- Confronto con mese precedente
+
+**Implementazione:**
+- [ ] Endpoint `/api/report` o `/cron/monthly-report` nel backend
+- [ ] Aggregazione dati dai log strutturati (gia presenti: success, rejected, error con restaurant_id)
+- [ ] Output: JSON (per dashboard) o PDF/email (per il ristorante)
+- [ ] Cron mensile (1 del mese) o on-demand via API
+- [ ] Disponibile per PRO e Premium
+
+**Priorita:** MEDIA
+
+**Status:** [ ] Da fare
+
+---
+
+### Architettura automazioni
+
+Tutte le automazioni (I1, I2, I3) vivono nello stesso backend Node.js su Render.
+Non passano da Vapi. Sono job schedulati attivati da un cron esterno.
+
+```
+Cron esterno (cron-job.org)
+  |
+  |-- ogni 30 min --> GET /cron/reminders  (I1)
+  |-- ogni 30 min --> GET /cron/reviews    (I2)
+  |-- 1 del mese --> GET /cron/report      (I3)
+  |
+  v
+Backend Node.js (Render)
+  |
+  |-- Legge prenotazioni da Sheets/resOS/OctoTable
+  |-- Manda SMS via Twilio
+  |-- Manda WhatsApp via Twilio/Meta API (se Premium)
+  |-- Genera report da log strutturati
+```
+
+WhatsApp in entrata (G1) e un discorso separato: richiede un webhook che riceve messaggi
+e li elabora con lo stesso backend/tools delle chiamate Vapi.
+
+---
+
+## RIEPILOGO PACCHETTI vs FEATURE
+
+| Feature | BASE | PRO | PREMIUM | Fase |
+|---------|------|-----|---------|------|
+| AI risponde 24/7 | Si | Si | Si | Fatto |
+| FAQ | Si | Si | Si | Fatto |
+| Trasferimento staff | Si | Si | Si | Fatto |
+| Gestione prenotazioni | - | Si | Si | Fatto |
+| SMS conferma | - | Si | Si | H2 |
+| Report mensile | - | Si | Si | I3 |
+| Promemoria anti no-show | - | - | Si | I1 |
+| Richiesta recensione | - | - | Si | I2 |
+| Canale WhatsApp | - | - | Si | G1 |
+| Multilingua | - | - | Si | Config voce/prompt |
+
+---
+
+## CONTROLLO OPERATIVO E SICUREZZA (7 PUNTI)
+
+Questa sezione riassume i 7 controlli chiave per gestire il servizio in modo affidabile nei ristoranti reali.
+
+### S1. Conferma prenotazione solo con `ok:true` + `booking_id`
+- **Stato attuale:** [~] Parzialmente fatto
+- **Gia presente:** backend ritorna `ok` e `booking_id` quando la creazione va a buon fine
+- **Manca per 100%:** enforcement lato prompt e checklist operativa che vieta conferme vocali senza esito tool positivo
+- **Target completamento:** prima del rollout su piu ristoranti
+
+### S2. Messaggio al cliente basato su `message` backend
+- **Stato attuale:** [~] Parzialmente fatto
+- **Gia presente:** regole prompt `REGOLA MESSAGE` e `REGOLA TIME_HUMAN`
+- **Manca per 100%:** monitor dei casi in cui il modello riformula comunque il testo
+- **Target completamento:** continuo (monitoraggio settimanale)
+
+### S3. Riconciliazione automatica tool success vs record reale
+- **Stato attuale:** [ ] Non fatto
+- **Gia presente:** log strutturati e ID prenotazione
+- **Manca per 100%:** job automatico che verifica mismatch tra log e stato reale su gestionale/Sheets
+- **Target completamento:** alta priorita (prima di scalare oltre il primo pilota)
+
+### S4. Alert automatici su anomalie
+- **Stato attuale:** [ ] Non fatto
+- **Gia presente:** metriche e log backend
+- **Manca per 100%:** notifiche automatiche (Telegram/Email) su error rate alto, mismatch, provider failure
+- **Target completamento:** alta priorita (dopo primo pilota, prima di vendita multipla)
+
+### S5. Dashboard operativa semplice (non tecnica)
+- **Stato attuale:** [~] Parzialmente fatto
+- **Gia presente:** dati nei log e in `/metrics`
+- **Manca per 100%:** vista giornaliera semplice con KPI minimi (chiamate, create, errori, handover)
+- **Target completamento:** media priorita (fase PRO/Premium)
+
+### S6. Fallback umano sempre disponibile
+- **Stato attuale:** [x] Fatto
+- **Gia presente:** transfer call tool + flussi handover
+- **Manca per 100%:** verifica onboarding per ogni nuovo ristorante (numero corretto + test trasferimento)
+- **Target completamento:** mantenimento continuo
+
+### S7. Rollout progressivo (pilot-first)
+- **Stato attuale:** [x] Definito come strategia
+- **Gia presente:** approccio pilota e test incrementali
+- **Gia presente (infrastruttura):** `release_channel` per tenant (`stable/canary`) + helper backend + log `release_channel`
+- **Scelta operativa attuale:** canary via service separato Render (`backend-canary`) con switch URL tool su 1-2 tenant
+- **Manca per 100%:** usare regolarmente il canary ad ogni release + eventuale collegamento feature-flag reale a `release_channel`
+- **Target completamento:** prima dell'espansione commerciale
+
+### Stato sintetico
+- **Fatti:** S6, S7 (strategia)
+- **Parziali:** S1, S2, S5
+- **Da fare:** S3, S4
+
+### Processo release sicure (obbligatorio da ora)
+- [x] Strategia pilot-first (1 ristorante canary)
+- [x] Workflow staging -> produzione -> canary -> promozione globale
+- [x] Procedura rollback backend + prompt
+- [ ] Alert automatici hourly su errori/mismatch (S4)
+- [ ] Riconciliazione automatica booking/log (S3)
+
+Documenti operativi:
+- `docs/GO-LIVE-RUNBOOK.md`
+- `docs/STAGING-GUIDE.md`
+
+---
+
+*Ultimo aggiornamento: 2026-02-19*

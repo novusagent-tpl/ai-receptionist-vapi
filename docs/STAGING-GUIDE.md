@@ -4,13 +4,17 @@ Come testare senza toccare i dati reali dei ristoranti.
 
 ---
 
-## 1. I 3 ambienti
+## 1. Ambienti consigliati (adesso)
 
 | Ambiente | Dove gira | NODE_ENV | Scopo |
 |----------|-----------|----------|-------|
 | **Dev (locale)** | Il tuo PC | `development` | Sviluppo e debug. Endpoint `/debug` attivi. |
 | **Staging** | Render (secondo servizio) oppure locale | `staging` | Test pre-deploy. Usa tenant `demo01`. |
 | **Produzione** | Render (servizio principale) | `production` | Ristoranti veri. Endpoint `/debug` bloccati. |
+
+Canary service separato (`backend-canary`) e opzionale:
+- lo crei solo quando vuoi testare una nuova release su 1-2 ristoranti reali
+- non serve tenerlo sempre acceso
 
 ---
 
@@ -76,3 +80,46 @@ Se vuoi un ambiente staging separato su Render:
 
 > **Mai testare con `restaurant_id: "modena01"` o `"roma"` se stai sperimentando.**
 > Usa sempre `"demo01"` per prove e demo.
+
+---
+
+## 6. Canary rollout (release sicure)
+
+Per evitare regressioni sui ristoranti gia live:
+
+1. Deploy su `backend-canary` solo dopo test staging.
+2. Punta 1-2 assistant Vapi reali a `backend-canary`.
+3. Monitora 24-72h:
+   - errori backend
+   - reject anomali
+   - eventuali mismatch operativi
+4. Se stabile, estendi agli altri tenant (spostando gli URL tool).
+
+Se compare anomalia critica, rollback immediato.
+
+---
+
+## 7. Rollback veloce (backend + prompt)
+
+Preparazione minima:
+- conserva sempre una copia dell'ultimo package backend stabile
+- conserva una copia dei prompt stabili per ogni tenant
+
+Se release problematica:
+1. ripristina backend stabile su Render
+2. ripristina prompt stabile su Vapi (tenant impattato)
+3. esegui 2 smoke call (prenotazione + handover)
+
+Tempo target: meno di 10 minuti.
+
+---
+
+## 8. Workflow consigliato (riassunto)
+
+1. Sviluppo locale
+2. Test su `demo01` / staging
+3. Regression tests
+4. Deploy produzione
+5. Canary tenant
+6. Monitor 24-72h
+7. Promozione completa o rollback

@@ -58,3 +58,11 @@ Ogni variabile in `.env` locale deve esistere anche su **Render → Environment 
 - [ ] FAQ → risponde correttamente
 - [ ] `/metrics` → nessun errore anomalo
 - [ ] Ristorante LIVE
+
+## 8. Release safety (obbligatorio)
+- [ ] Test su `demo01` completati prima del rilascio
+- [ ] Tenant canary monitorato 24-72h prima di estendere ad altri tenant
+- [ ] `release_channel` impostato intenzionalmente in `src/config/ristoranti.json` (`stable` default, `canary` solo rollout controllato)
+- [ ] Snapshot backend stabile salvato (rollback rapido)
+- [ ] Snapshot prompt stabile salvato per il tenant (rollback rapido)
+- [ ] 2 smoke call post-deploy (prenotazione + handover)
